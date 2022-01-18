@@ -177,6 +177,7 @@ const struct flash_info spi_nor_ids[] = {
 	{ INFO("mx25l1633e", 0xc22415, 0, 64 * 1024,   32, SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES | SECT_4K) },
 	{ INFO("mx25r6435f", 0xc22817, 0, 64 * 1024,   128,  SECT_4K) },
 	{ INFO("mx25uw51345g", 0xc2843a, 0,  64 * 1024,  1024, SECT_4K | SPI_NOR_4B_OPCODES) },
+    { INFO("mx25r3235f",  0xc22816, 0, 64 * 1024, 64, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES) },
 #endif
 
 #ifdef CONFIG_SPI_FLASH_STMICRO		/* STMICRO */
