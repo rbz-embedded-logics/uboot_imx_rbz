@@ -1,0 +1,8 @@
+RBZ MOD IMX8MN
+M:	Peng Fan <peng.fan@nxp.com>
+S:	Maintained
+F:  arch/arm/dts/rbz-mod-imx8mn.dts
+F:  arch/arm/dts/rbz-mod-imx8mn-u-boot.dtsi
+F:	board/rbz/rbz_mod_imx8mn/
+F:	include/configs/rbz_mod_imx8mn.h
+F:	configs/imx8mn_ddr4_evk_defconfig

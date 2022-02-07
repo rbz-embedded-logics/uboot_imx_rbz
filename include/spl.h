@@ -321,6 +321,7 @@ int spl_load_imx_container(struct spl_image_info *spl_image,
 
 /* SPL common functions */
 void preloader_console_init(void);
+void preloader_put_banner(void);
 u32 spl_boot_device(void);
 
 /**

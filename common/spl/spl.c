@@ -769,6 +769,12 @@ void preloader_console_init(void)
 #endif
 }
 
+void preloader_put_banner(void)
+{
+	puts("\nU-Boot " SPL_TPL_NAME " " PLAIN_VERSION " (" U_BOOT_DATE " - "
+	     U_BOOT_TIME " " U_BOOT_TZ ")\n");
+}
+
 /**
  * This function is called before the stack is changed from initial stack to
  * relocated stack. It tries to dump the stack size used
