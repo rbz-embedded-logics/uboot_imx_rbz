@@ -9,4 +9,6 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "mod_imx8m_nano"
 
+source "board/rbz/common/Kconfig"
+
 endif

@@ -4,6 +4,9 @@
  */
 
 #include <common.h>
+#include <env.h>
+#include <init.h>
+#include <asm/global_data.h>
 #include <miiphy.h>
 #include <netdev.h>
 #include <asm/mach-imx/iomux-v3.h>
@@ -16,6 +19,8 @@
 #include <i2c.h>
 #include <asm/io.h>
 #include <usb.h>
+#include <imx_sip.h>
+#include <linux/arm-smccc.h>
 #include <micrel.h>
 #include <mmc.h>
 
@@ -53,7 +58,6 @@ int board_read_rom_ethaddr(void)
 {
   int ret = -EINVAL;
   unsigned char mac[6] = {};
-  char cmd[128] = {};
   struct udevice *dev;
   ofnode eeprom;
 
@@ -126,50 +130,22 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
 	return USB_INIT_DEVICE;
 }
 
+#define DISPMIX				9
+#define MIPI				10
+
 int board_init(void)
 {
+	struct arm_smccc_res res;
+
 	if (IS_ENABLED(CONFIG_FEC_MXC))
 		setup_fec();
 
-	return 0;
-}
-
-static int check_mmc_autodetect(void)
-{
-	char *autodetect_str = env_get("mmcautodetect");
-
-	if ((autodetect_str != NULL) &&
-		(strcmp(autodetect_str, "yes") == 0)) {
-		return 1;
-	}
+	arm_smccc_smc(IMX_SIP_GPC, IMX_SIP_GPC_PM_DOMAIN,
+		      DISPMIX, true, 0, 0, 0, 0, &res);
+	arm_smccc_smc(IMX_SIP_GPC, IMX_SIP_GPC_PM_DOMAIN,
+		      MIPI, true, 0, 0, 0, 0, &res);
 
 	return 0;
-}
-
-/* This should be defined for each board */
-__weak int mmc_map_to_kernel_blk(int dev_no)
-{
-	return dev_no;
-}
-
-void board_late_mmc_env_init(void)
-{
-	char cmd[32];
-	char mmcblk[32];
-	u32 dev_no = mmc_get_env_dev();
-
-	if (!check_mmc_autodetect())
-		return;
-
-	env_set_ulong("mmcdev", dev_no);
-
-	/* Set mmcblk env */
-	sprintf(mmcblk, "/dev/mmcblk%dp2 rootwait rw",
-		mmc_map_to_kernel_blk(dev_no));
-	env_set("mmcroot", mmcblk);
-
-	sprintf(cmd, "mmc dev %d", dev_no);
-	run_command(cmd, 0);
 }
 
 int board_late_init(void)

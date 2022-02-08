@@ -9,13 +9,18 @@
 #include "imx8mn.dtsi"
 
 / {
-	model = "RBZ MOD i.MX8MN";
-	compatible = "rbz,mod-imx8m-nano", "fsl,imx8mn";
+	model = "RBZ MOD_IMX8M_NANO Board";
+	compatible = "fsl,imx8mn-evk", "fsl,imx8mn";
 
 	chosen {
-		bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200";
+		bootargs = "console=ttymxc0,115200";
 		stdout-path = &uart1;
         rbz,eeprom = &eeprom;
+	};
+	
+    memory@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0 0x80000000>;
 	};
 };
 
@@ -108,12 +113,6 @@
 		    >;
 	    };
   
-        pinctrl_usbotg2: usbotg2grp {
-            fsl,pins = <
-                MX8MN_IOMUXC_GPIO1_IO10_GPIO1_IO10     0x16
-            >;
-        };
-
 		pinctrl_uart1: uart1grp {
 			fsl,pins = <
 			    MX8MN_IOMUXC_SAI2_RXC_UART1_DTE_TX	0x140
@@ -452,13 +451,4 @@
 &usbotg1 {
     dr_mode = "host";
 	status = "okay";
-};
-
-&usbotg2 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_usbotg2>;
-    fsl,reset-gpio = <&gpio1 10 GPIO_ACTIVE_LOW>;
-    dr_mode = "host";
-    disable-over-current;
-    status = "okay";
 };

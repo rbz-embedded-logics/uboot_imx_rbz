@@ -242,7 +242,7 @@ config TARGET_IMX8MN_DDR3L_AB2
 
 config TARGET_MOD_IMX8M_NANO
 	bool "RBZ MOD_IMX8M_NANO Board"
-	select IMX8MP
+	select IMX8MN
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
 	select FSL_CAAM
