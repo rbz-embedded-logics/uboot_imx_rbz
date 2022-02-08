@@ -1,8 +1,8 @@
-RBZ MOD IMX8MN
-M:	Peng Fan <peng.fan@nxp.com>
+RBZ MOD_IMX8M_NANO BOARD
+M:	Carlos Amor <camor@rbz.es>
 S:	Maintained
-F:  arch/arm/dts/rbz-mod-imx8mn.dts
-F:  arch/arm/dts/rbz-mod-imx8mn-u-boot.dtsi
-F:	board/rbz/rbz_mod_imx8mn/
-F:	include/configs/rbz_mod_imx8mn.h
-F:	configs/imx8mn_ddr4_evk_defconfig
+F:  arch/arm/dts/mod-imx8m-nano.dts
+F:  arch/arm/dts/mod-imx8m-nano-u-boot.dtsi
+F:	board/rbz/mod_imx8m_nano/
+F:	include/configs/mod_imx8m_nano.h
+F:	configs/mod_imx8m_nano_defconfig
