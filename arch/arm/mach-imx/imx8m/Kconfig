@@ -250,6 +250,16 @@ config TARGET_MOD_IMX8M_NANO
 	select MISC
 	select SPL_CRYPTO_SUPPORT if SPL
 
+config TARGET_MOD_IMX8M_MINI
+	bool "RBZ MOD_IMX8M_MINI Board"
+	select IMX8MM
+	select SUPPORT_SPL
+	select IMX8M_LPDDR4
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select SPL_CRYPTO_SUPPORT if SPL
+
 config TARGET_VERDIN_IMX8MM
        bool "Support Toradex Verdin iMX8M Mini module"
        select IMX8MM
@@ -298,5 +308,6 @@ source "board/phytec/phycore_imx8mm/Kconfig"
 source "board/phytec/phycore_imx8mp/Kconfig"
 source "board/rbz/mod_imx8m_plus/Kconfig"
 source "board/rbz/mod_imx8m_nano/Kconfig"
+source "board/rbz/mod_imx8m_mini/Kconfig"
 
 endif
