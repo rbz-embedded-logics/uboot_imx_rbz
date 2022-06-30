@@ -154,13 +154,13 @@ int board_fit_config_name_match(const char *name)
 }
 #endif
 
-#define UFCR		0x90	/* FIFO Control Register */
-#define UFCR_DCEDTE	BIT(6)	/* DCE=0 */
+/*#define UFCR		0x90	*//* FIFO Control Register */
+/*#define UFCR_DCEDTE	BIT(6)	*//* DCE=0 */
 
-static void setup_dtemode_uart(void)
-{
-  setbits_le32((u32 *)(UART1_BASE_ADDR + UFCR), UFCR_DCEDTE);
-}
+/*static void setup_dtemode_uart(void)*/
+/*{*/
+/*setbits_le32((u32 *)(UART1_BASE_ADDR + UFCR), UFCR_DCEDTE);*/
+/*}*/
 
 void board_init_f(ulong dummy)
 {
@@ -177,8 +177,8 @@ void board_init_f(ulong dummy)
 	timer_init();
 
 	preloader_console_init();
-    setup_dtemode_uart();
-    preloader_put_banner();
+    /*setup_dtemode_uart();*/
+    /*preloader_put_banner();*/
 
 	ret = spl_early_init();
 	if (ret) {
