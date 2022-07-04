@@ -95,19 +95,30 @@ static int setup_fec(void)
 
 int board_phy_config(struct phy_device *phydev)
 {
-  /**//* enable rgmii rxc skew and phy mode select to RGMII copper */
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1d, 0x1f);*/
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, 0x8);*/
+  /* Config LED0 for 10/100/1000 Link status */
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x001f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x01e3);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x401f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x0000);
 
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1d, 0x00);*/
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, 0x82ee);*/
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1d, 0x05);*/
-  /*phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, 0x100);*/
+  /* Config LED1 for blinking with activity */
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x001f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x01e4);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x401f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x0000);
 
-	if (phydev->drv->config)
-		phydev->drv->config(phydev);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x001f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x01e5);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0d, 0x401f);
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x0e, 0x0003);
 
-	return 0;
+  /* Invert LED0 and LED1 polarity */
+  phy_write(phydev, MDIO_DEVAD_NONE, 0x1b, 0x3300);
+
+  if (phydev->drv->config)
+    phydev->drv->config(phydev);
+
+  return 0;
 }
 #endif
 
