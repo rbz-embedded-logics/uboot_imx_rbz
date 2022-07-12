@@ -50,7 +50,8 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 	case MMC3_BOOT:
 		return BOOT_DEVICE_MMC2;
 	case QSPI_BOOT:
-		return BOOT_DEVICE_NOR;
+        /*return BOOT_DEVICE_NOR;*/
+        return BOOT_DEVICE_MMC2;
 	case NAND_BOOT:
 		return BOOT_DEVICE_NAND;
 	case USB_BOOT:

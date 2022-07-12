@@ -172,6 +172,7 @@
 				MX8MN_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d0
 				MX8MN_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d0
 				MX8MN_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d0
+                MX8MN_IOMUXC_NAND_READY_B_USDHC3_RESET_B    0x190
 				MX8MN_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x190
 			>;
 		};
@@ -188,6 +189,7 @@
 				MX8MN_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d4
 				MX8MN_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d4
 				MX8MN_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d4
+                MX8MN_IOMUXC_NAND_READY_B_USDHC3_RESET_B    0x194
 				MX8MN_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x194
 			>;
 		};
@@ -204,6 +206,7 @@
 				MX8MN_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d6
 				MX8MN_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d6
 				MX8MN_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d6
+                MX8MN_IOMUXC_NAND_READY_B_USDHC3_RESET_B    0x196
 				MX8MN_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x196
 			>;
 		};
@@ -431,10 +434,11 @@
 };
 
 &usdhc3 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	/*pinctrl-names = "default", "state_100mhz", "state_200mhz";*/
+	pinctrl-names = "default", "state_100mhz";
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	/*pinctrl-2 = <&pinctrl_usdhc3_200mhz>;*/
 	bus-width = <8>;
 	non-removable;
 	status = "okay";
