@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <mmc.h>
 #include <env.h>
+#include <asm/mach-imx/boot_mode.h>
 
 static int check_mmc_autodetect(void)
 {
@@ -34,11 +35,21 @@ void board_late_mmc_env_init(void)
 {
 	char cmd[32];
 	char mmcblk[32];
-	u32 dev_no = mmc_get_env_dev();
+    u32 dev_no = mmc_get_env_dev();
 
 	if (!check_mmc_autodetect())
 		return;
 
+    switch (get_boot_device()) {
+      case SD2_BOOT:
+        dev_no = 1;
+        break;
+      case QSPI_BOOT:
+        dev_no = 2;
+        break;
+      default:
+        break; 
+    }
 	env_set_ulong("mmcdev", dev_no);
 
 	/* Set mmcblk env */
