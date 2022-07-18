@@ -35,11 +35,6 @@
 #endif
 
 /* Misc CPU related */
-#define CONFIG_ARCH_CPU_INIT
-#define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-#define CONFIG_SKIP_LOWLEVEL_INIT
 
 /* general purpose I/O */
 #define CONFIG_ATMEL_LEGACY		/* required until (g)pio is fixed */
@@ -53,7 +48,6 @@
  * SDRAM: 1 bank, min 32, max 128 MB
  * Initialized before u-boot gets started.
  */
-#define CONFIG_NR_DRAM_BANKS		1
 #define CONFIG_SYS_SDRAM_BASE		ATMEL_BASE_CS1
 #define CONFIG_SYS_SDRAM_SIZE		0x04000000
 
@@ -70,27 +64,8 @@
 	(ATMEL_BASE_SRAM1 + 16 * 1024 - GENERATED_GBL_DATA_SIZE)
 #endif
 
-/*
- * The (arm)linux board id set by generic code depending on configured board
- * (see boards.cfg for different boards)
- */
-#ifdef CONFIG_AT91SAM9G20
-	/* the sam9g20 variants have two different board ids */
-# ifdef CONFIG_AT91SAM9G20EK_2MMC
-	/* we may be setup for the 2MMC variant of at91sam9g20ek */
-#  define CONFIG_MACH_TYPE MACH_TYPE_AT91SAM9G20EK_2MMC
-# else
-	/* or the normal at91sam9g20ek */
-#  define CONFIG_MACH_TYPE MACH_TYPE_AT91SAM9G20EK
-# endif
-#else
-	/* otherwise default to good old at91sam9260ek */
-# define CONFIG_MACH_TYPE MACH_TYPE_AT91SAM9260EK
-#endif
-
 /* NAND flash */
 #ifdef CONFIG_CMD_NAND
-#define CONFIG_NAND_ATMEL
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		ATMEL_BASE_CS3
 #define CONFIG_SYS_NAND_DBW_8
@@ -109,54 +84,16 @@
 #define CONFIG_SYS_USB_OHCI_SLOT_NAME		"at91sam9260"
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	2
 
-#define CONFIG_SYS_LOAD_ADDR			0x22000000	/* load address */
-
-#define CONFIG_SYS_MEMTEST_START		CONFIG_SYS_SDRAM_BASE
-#define CONFIG_SYS_MEMTEST_END			0x23e00000
-
 #ifdef CONFIG_SYS_USE_DATAFLASH_CS0
 
 /* bootstrap + u-boot + env + linux in dataflash on CS0 */
-#define CONFIG_ENV_OFFSET	0x4200
-#define CONFIG_ENV_SIZE		0x4200
-#define CONFIG_ENV_SECT_SIZE	0x210
-#define CONFIG_ENV_SPI_MAX_HZ	15000000
-#define CONFIG_BOOTCOMMAND	"sf probe 0:0; " \
-				"sf read 0x22000000 0x84000 0x294000; " \
-				"bootm 0x22000000"
-
-#elif CONFIG_SYS_USE_DATAFLASH_CS1
-
-#define CONFIG_ENV_OFFSET	0x4200
-#define CONFIG_ENV_SIZE		0x4200
-#define CONFIG_ENV_SECT_SIZE	0x210
-#define CONFIG_ENV_SPI_MAX_HZ	15000000
-#define CONFIG_BOOTCOMMAND	"sf probe 0:1; " \
-				"sf read 0x22000000 0x84000 0x294000; " \
-				"bootm 0x22000000"
-
 #elif defined(CONFIG_SYS_USE_NANDFLASH)
 
 /* bootstrap + u-boot + env + linux in nandflash */
-#define CONFIG_ENV_OFFSET		0x140000
-#define CONFIG_ENV_OFFSET_REDUND	0x100000
-#define CONFIG_ENV_SIZE		0x20000		/* 1 sector = 128 kB */
-#define CONFIG_BOOTCOMMAND	"nand read 0x22000000 0x200000 0x300000; bootm"
 
 #else	/* CONFIG_SYS_USE_MMC */
 /* bootstrap + u-boot + env + linux in mmc */
 /* For FAT system, most cases it should be in the reserved sector */
-#define CONFIG_ENV_OFFSET		0x2000
-#define CONFIG_ENV_SIZE			0x1000
-#define CONFIG_SYS_MMC_ENV_DEV		0
-
-#define CONFIG_BOOTCOMMAND						\
-	"fatload mmc 0:1 0x22000000 uImage; bootm"
 #endif
-
-/*
- * Size of malloc() pool
- */
-#define CONFIG_SYS_MALLOC_LEN		ROUND(3 * CONFIG_ENV_SIZE + 128*1024, 0x1000)
 
 #endif

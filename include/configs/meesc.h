@@ -32,16 +32,6 @@
 #define CONFIG_SYS_AT91_MAIN_CLOCK	16000000/* 16.0 MHz crystal */
 
 /* Misc CPU related */
-#define CONFIG_SKIP_LOWLEVEL_INIT
-#define CONFIG_ARCH_CPU_INIT
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-#define CONFIG_SERIAL_TAG
-#define CONFIG_REVISION_TAG
-#define CONFIG_CMDLINE_TAG			/* enable passing of ATAGs */
-#define CONFIG_MISC_INIT_R			/* Call misc_init_r */
-
-#define CONFIG_PREBOOT				/* enable preboot variable */
 
 /*
  * Hardware drivers
@@ -59,13 +49,8 @@
 #define PHYS_SDRAM					ATMEL_BASE_CS1 /* 0x20000000 */
 #define PHYS_SDRAM_SIZE				0x02000000     /* 32 MByte */
 
-#define CONFIG_NR_DRAM_BANKS		1
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM
 #define CONFIG_SYS_SDRAM_SIZE		PHYS_SDRAM_SIZE
-
-#define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_SDRAM_BASE + 0x00100000)
-#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x01E00000)
-#define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x00100000)
 
 /*
  * Initial stack pointer: 4k - GENERATED_GBL_DATA_SIZE in internal SRAM,
@@ -77,7 +62,6 @@
 
 /* NAND flash */
 #ifdef CONFIG_CMD_NAND
-# define CONFIG_NAND_ATMEL
 # define CONFIG_SYS_MAX_NAND_DEVICE		1
 # define CONFIG_SYS_NAND_BASE			ATMEL_BASE_CS3 /* 0x40000000 */
 # define CONFIG_SYS_NAND_DBW_8
@@ -88,7 +72,6 @@
 #endif
 
 /* Ethernet */
-#define CONFIG_MACB
 #define CONFIG_RMII
 #define CONFIG_NET_RETRY_COUNT			20
 #undef CONFIG_RESET_PHY_R
@@ -99,25 +82,13 @@
 #ifdef CONFIG_SYS_USE_DATAFLASH
 
 /* bootstrap + u-boot + env in dataflash on CS0 */
-#define CONFIG_ENV_OFFSET	0x4200
-#define CONFIG_ENV_SIZE		0x4200
-#define CONFIG_ENV_SECT_SIZE	0x210
-#define CONFIG_ENV_SPI_MAX_HZ	15000000
 
 #elif CONFIG_SYS_USE_NANDFLASH
 
 /* bootstrap + u-boot + env + linux in nandflash */
-# define CONFIG_ENV_OFFSET		0xC0000
-# define CONFIG_ENV_SIZE		0x20000
 
 #endif
 
 #define CONFIG_SYS_CBSIZE		512
-
-/*
- * Size of malloc() pool
- */
-#define CONFIG_SYS_MALLOC_LEN		ROUND(3 * CONFIG_ENV_SIZE + \
-					128*1024, 0x1000)
 
 #endif

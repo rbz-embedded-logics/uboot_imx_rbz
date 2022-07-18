@@ -22,12 +22,6 @@
 
 #include <asm/hardware.h>
 
-#define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-
-#define CONFIG_SKIP_LOWLEVEL_INIT
-
 #define CONFIG_ATMEL_LEGACY
 
 /*
@@ -51,7 +45,6 @@
 #define CONFIG_BOOTP_BOOTFILESIZE
 
 /* SDRAM */
-#define CONFIG_NR_DRAM_BANKS		1
 #define CONFIG_SYS_SDRAM_BASE		0x20000000
 #define CONFIG_SYS_SDRAM_SIZE		0x04000000
 #define CONFIG_SYS_INIT_SP_ADDR \
@@ -59,7 +52,6 @@
 
 /* NAND flash */
 #ifdef CONFIG_CMD_NAND
-#define CONFIG_NAND_ATMEL
 #define CONFIG_SYS_MAX_NAND_DEVICE		1
 #define CONFIG_SYS_NAND_BASE			0x40000000
 #define CONFIG_SYS_NAND_DBW_8
@@ -95,45 +87,17 @@
 #endif
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	2
 
-#define CONFIG_SYS_LOAD_ADDR			0x22000000	/* load address */
-
-#define CONFIG_SYS_MEMTEST_START		CONFIG_SYS_SDRAM_BASE
-#define CONFIG_SYS_MEMTEST_END			0x23e00000
-
 #ifdef CONFIG_SYS_USE_DATAFLASH_CS0
 
 /* bootstrap + u-boot + env + linux in dataflash on CS0 */
-#define CONFIG_ENV_OFFSET	0x4200
-#define CONFIG_ENV_SIZE		0x4200
-#define CONFIG_ENV_SECT_SIZE	0x210
-#define CONFIG_ENV_SPI_MAX_HZ	15000000
-#define CONFIG_BOOTCOMMAND	"sf probe 0; " \
-				"sf read 0x22000000 0x84000 0x294000; " \
-				"bootm 0x22000000"
 
 #elif CONFIG_SYS_USE_DATAFLASH_CS3
 
 /* bootstrap + u-boot + env + linux in dataflash on CS3 */
-#define CONFIG_ENV_OFFSET	0x4200
-#define CONFIG_ENV_SIZE		0x4200
-#define CONFIG_ENV_SECT_SIZE	0x210
-#define CONFIG_ENV_SPI_MAX_HZ	15000000
-#define CONFIG_BOOTCOMMAND	"sf probe 0:3; " \
-				"sf read 0x22000000 0x84000 0x294000; " \
-				"bootm 0x22000000"
 
 #else /* CONFIG_SYS_USE_NANDFLASH */
 
 /* bootstrap + u-boot + env + linux in nandflash */
-#define CONFIG_ENV_OFFSET		0x140000
-#define CONFIG_ENV_OFFSET_REDUND	0x100000
-#define CONFIG_ENV_SIZE		0x20000		/* 1 sector = 128 kB */
-#define CONFIG_BOOTCOMMAND	"nand read 0x22000000 0x200000 0x300000; bootm"
 #endif
-
-/*
- * Size of malloc() pool
- */
-#define CONFIG_SYS_MALLOC_LEN		ROUND(3 * CONFIG_ENV_SIZE + 128*1024, 0x1000)
 
 #endif

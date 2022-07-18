@@ -11,8 +11,11 @@
 #ifndef DESC_H
 #define DESC_H
 
+#include "type.h"
+
 #define KEY_BLOB_SIZE		32
 #define MAC_SIZE			16
+#define BKEK_SIZE		32
 
 /* Max size of any CAAM descriptor in 32-bit words, inclusive of header */
 #define MAX_CAAM_DESCSIZE	64
@@ -433,6 +436,7 @@
 /* Assuming OP_TYPE = OP_TYPE_UNI_PROTOCOL */
 #define OP_PCLID_SECMEM		0x08
 #define OP_PCLID_BLOB		(0x0d << OP_PCLID_SHIFT)
+#define OP_PCL_BLOB_BLACK	0x0004
 #define OP_PCLID_SECRETKEY	(0x11 << OP_PCLID_SHIFT)
 #define OP_PCLID_PUBLICKEYPAIR	(0x14 << OP_PCLID_SHIFT)
 #define OP_PCLID_DSA_SIGN	(0x15 << OP_PCLID_SHIFT)
@@ -460,6 +464,9 @@
 #define OP_PROTINFO_HASH_SHA256	0x00000180
 #define OP_PROTINFO_HASH_SHA384	0x00000200
 #define OP_PROTINFO_HASH_SHA512	0x00000280
+
+/* PROTINFO fields for Blob Operations */
+#define OP_PROTINFO_MKVB	0x00000002
 
 /* For non-protocol/alg-only op commands */
 #define OP_ALG_TYPE_SHIFT	24
@@ -490,6 +497,9 @@
 #define OP_ALG_AAI_SHIFT	4
 #define OP_ALG_AAI_MASK		(0x1ff << OP_ALG_AAI_SHIFT)
 
+/* block cipher AAI set */
+#define OP_ALG_AAI_ECB		(0x20 << OP_ALG_AAI_SHIFT)
+
 /* randomizer AAI set */
 #define OP_ALG_AAI_RNG		(0x00 << OP_ALG_AAI_SHIFT)
 #define OP_ALG_AAI_RNG_NZB	(0x10 << OP_ALG_AAI_SHIFT)
@@ -519,6 +529,8 @@
 #define OP_ALG_ICV_MASK		(1 << OP_ALG_ICV_SHIFT)
 #define OP_ALG_ICV_OFF		(0 << OP_ALG_ICV_SHIFT)
 #define OP_ALG_ICV_ON		(1 << OP_ALG_ICV_SHIFT)
+
+#define OP_ALG_PR_ON		0x02
 
 #define OP_ALG_DIR_SHIFT	0
 #define OP_ALG_DIR_MASK		1
@@ -691,29 +703,29 @@
 /* Structures for Protocol Data Blocks */
 struct __packed pdb_ecdsa_verify {
 	uint32_t pdb_hdr;
-	dma_addr_t dma_q;	/* Pointer to q (elliptic curve) */
-	dma_addr_t dma_r;	/* Pointer to r (elliptic curve) */
-	dma_addr_t dma_g_xy;	/* Pointer to Gx,y (elliptic curve) */
-	dma_addr_t dma_pkey;	/* Pointer to Wx,y (public key) */
-	dma_addr_t dma_hash;	/* Pointer to hash input */
-	dma_addr_t dma_c;	/* Pointer to C_signature */
-	dma_addr_t dma_d;	/* Pointer to D_signature */
-	dma_addr_t dma_buf;	/* Pointer to 64-byte temp buffer */
-	dma_addr_t dma_ab;	/* Pointer to a,b (elliptic curve ) */
+	caam_dma_addr_t dma_q;	/* Pointer to q (elliptic curve) */
+	caam_dma_addr_t dma_r;	/* Pointer to r (elliptic curve) */
+	caam_dma_addr_t dma_g_xy;	/* Pointer to Gx,y (elliptic curve) */
+	caam_dma_addr_t dma_pkey;	/* Pointer to Wx,y (public key) */
+	caam_dma_addr_t dma_hash;	/* Pointer to hash input */
+	caam_dma_addr_t dma_c;	/* Pointer to C_signature */
+	caam_dma_addr_t dma_d;	/* Pointer to D_signature */
+	caam_dma_addr_t dma_buf;	/* Pointer to 64-byte temp buffer */
+	caam_dma_addr_t dma_ab;	/* Pointer to a,b (elliptic curve ) */
 	uint32_t img_size;	/* Length of Message */
 };
 
 struct __packed pdb_ecdsa_sign {
 	uint32_t pdb_hdr;
-	dma_addr_t dma_q;	/* Pointer to q (elliptic curve) */
-	dma_addr_t dma_r;	/* Pointer to r (elliptic curve) */
-	dma_addr_t dma_g_xy;	/* Pointer to Gx,y (elliptic curve) */
-	dma_addr_t dma_pri_key;	/* Pointer to S (Private key) */
-	dma_addr_t dma_hash;	/* Pointer to hash input */
-	dma_addr_t dma_c;	/* Pointer to C_signature */
-	dma_addr_t dma_d;	/* Pointer to D_signature */
-	dma_addr_t dma_ab;	/* Pointer to a,b (elliptic curve ) */
-	dma_addr_t dma_u;	/* Pointer to Per Message Random */
+	caam_dma_addr_t dma_q;	/* Pointer to q (elliptic curve) */
+	caam_dma_addr_t dma_r;	/* Pointer to r (elliptic curve) */
+	caam_dma_addr_t dma_g_xy;	/* Pointer to Gx,y (elliptic curve) */
+	caam_dma_addr_t dma_pri_key;	/* Pointer to S (Private key) */
+	caam_dma_addr_t dma_hash;	/* Pointer to hash input */
+	caam_dma_addr_t dma_c;	/* Pointer to C_signature */
+	caam_dma_addr_t dma_d;	/* Pointer to D_signature */
+	caam_dma_addr_t dma_ab;	/* Pointer to a,b (elliptic curve ) */
+	caam_dma_addr_t dma_u;	/* Pointer to Per Message Random */
 	uint32_t img_size;	/* Length of Message */
 };
 
@@ -724,20 +736,21 @@ struct __packed pdb_ecdsa_sign {
 struct __packed pdb_mp_pub_k {
 	uint32_t pdb_hdr;
 	#define PDB_MP_PUB_K_SGF_SHIFT		31
-	dma_addr_t dma_pkey;	/* Pointer to Wx,y (public key) */
+	caam_dma_addr_t dma_pkey;	/* Pointer to Wx,y (public key) */
 };
 
 struct __packed pdb_mp_sign {
 	uint32_t pdb_hdr;
 	#define PDB_MP_SIGN_SGF_SHIFT		28
-	dma_addr_t dma_addr_msg;	/* Pointer to Message */
-	dma_addr_t dma_addr_hash;	/* Pointer to hash output */
-	dma_addr_t dma_addr_c_sig;	/* Pointer to C_signature */
-	dma_addr_t dma_addr_d_sig;	/* Pointer to D_signature */
+	caam_dma_addr_t dma_addr_msg;	/* Pointer to Message */
+	caam_dma_addr_t dma_addr_hash;	/* Pointer to hash output */
+	caam_dma_addr_t dma_addr_c_sig;	/* Pointer to C_signature */
+	caam_dma_addr_t dma_addr_d_sig;	/* Pointer to D_signature */
 	uint32_t img_size;		/* Length of Message */
 };
 
 #define PDB_MP_CSEL_SHIFT	17
+#define PDB_MP_CSEL_WIDTH	4
 #define PDB_MP_CSEL_P256	0x3 << PDB_MP_CSEL_SHIFT	/* P-256 */
 #define PDB_MP_CSEL_P384	0x4 << PDB_MP_CSEL_SHIFT	/* P-384 */
 #define PDB_MP_CSEL_P521	0x5 << PDB_MP_CSEL_SHIFT	/* P-521 */

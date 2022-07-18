@@ -13,13 +13,13 @@ SECTIONS
 		KEEP(*(SORT(.u_boot_list*)));
 	}
 
-	__u_boot_sandbox_option_start = .;
-	_u_boot_sandbox_getopt : { *(.u_boot_sandbox_getopt) }
-	__u_boot_sandbox_option_end = .;
+	_u_boot_sandbox_getopt : {
+		*(.u_boot_sandbox_getopt_start)
+		*(.u_boot_sandbox_getopt)
+		*(.u_boot_sandbox_getopt_end)
+	}
 
-	__bss_start = .;
-
-		.__efi_runtime_start : {
+	.__efi_runtime_start : {
 		*(.__efi_runtime_start)
 	}
 
@@ -47,6 +47,12 @@ SECTIONS
 		*(.__efi_runtime_rel_stop)
 	}
 
+	.dynsym :
+	{
+		__dyn_sym_start = .;
+		*(.dynsym)
+		__dyn_sym_end = .;
+	}
 }
 
 INSERT BEFORE .data;

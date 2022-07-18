@@ -6,7 +6,7 @@
 #include <config.h>
 #include <linux/linkage.h>
 
-#ifdef CONFIG_CPU_RISCV_64
+#ifdef CONFIG_ARCH_RV64I
 #define STORE_IDX(reg, idx)	sd reg, (idx*8)(a0)
 #define LOAD_IDX(reg, idx)	ld reg, (idx*8)(a0)
 #else
@@ -54,12 +54,8 @@ ENTRY(longjmp)
 	LOAD_IDX(sp, 13)
 
 	/* Move the return value in place, but return 1 if passed 0. */
-	beq a1, zero, longjmp_1
-	mv a0, a1
-	ret
-
-	longjmp_1:
-	li a0, 1
+	seqz a0, a1
+	add a0, a0, a1
 	ret
 ENDPROC(longjmp)
 .popsection

@@ -17,7 +17,7 @@ static unsigned int timer_ticks;
 static struct efi_boot_services *boottime;
 
 /*
- * Notification function, increments the notfication count if parameter
+ * Notification function, increments the notification count if parameter
  * context is provided.
  *
  * @event	notified event
@@ -39,7 +39,7 @@ static void EFIAPI notify(struct efi_event *event, void *context)
  *
  * @handle:	handle of the loaded image
  * @systable:	system table
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
@@ -69,7 +69,7 @@ static int setup(const efi_handle_t handle,
  *
  * Close the events created in setup.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int teardown(void)
 {
@@ -103,7 +103,7 @@ static int teardown(void)
  * Run a 100 ms single shot timer and check that it is called once
  * while waiting for 100 ms periodic timer for two periods.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int execute(void)
 {
@@ -147,20 +147,20 @@ static int execute(void)
 		return EFI_ST_FAILURE;
 	}
 	ret = boottime->set_timer(event_notify, EFI_TIMER_STOP, 0);
-	if (index != 0) {
+	if (ret != EFI_SUCCESS) {
 		efi_st_error("Could not cancel timer\n");
 		return EFI_ST_FAILURE;
 	}
 	/* Set 10 ms timer */
 	timer_ticks = 0;
 	ret = boottime->set_timer(event_notify, EFI_TIMER_RELATIVE, 100000);
-	if (index != 0) {
+	if (ret != EFI_SUCCESS) {
 		efi_st_error("Could not set timer\n");
 		return EFI_ST_FAILURE;
 	}
 	/* Set 100 ms timer */
 	ret = boottime->set_timer(event_wait, EFI_TIMER_PERIODIC, 1000000);
-	if (index != 0) {
+	if (ret != EFI_SUCCESS) {
 		efi_st_error("Could not set timer\n");
 		return EFI_ST_FAILURE;
 	}

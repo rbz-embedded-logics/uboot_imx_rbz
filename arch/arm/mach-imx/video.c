@@ -1,13 +1,29 @@
 // SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ *
+ */
 
 #include <common.h>
+#include <env.h>
 #include <linux/errno.h>
 #include <asm/mach-imx/video.h>
+
+#ifdef CONFIG_IMX_HDMI
+#include <asm/arch/mxc_hdmi.h>
+#include <asm/io.h>
+
+int detect_hdmi(struct display_info_t const *dev)
+{
+	struct hdmi_regs *hdmi	= (struct hdmi_regs *)HDMI_ARB_BASE_ADDR;
+	return readb(&hdmi->phy_stat0) & HDMI_DVI_STAT;
+}
+#endif
 
 int board_video_skip(void)
 {
 	int i;
-	int ret;
+	int ret = 0;
 	char const *panel = env_get("panel");
 
 	if (!panel) {
@@ -32,8 +48,14 @@ int board_video_skip(void)
 	}
 
 	if (i < display_count) {
+#if defined(CONFIG_VIDEO_IPUV3)
 		ret = ipuv3_fb_init(&displays[i].mode, displays[i].di ? 1 : 0,
 				    displays[i].pixfmt);
+#elif defined(CONFIG_VIDEO_MXS)
+		ret = mxs_lcd_panel_setup(displays[i].mode,
+					displays[i].pixfmt,
+				    displays[i].bus);
+#endif
 		if (!ret) {
 			if (displays[i].enable)
 				displays[i].enable(displays + i);
@@ -42,6 +64,11 @@ int board_video_skip(void)
 			       displays[i].mode.name,
 			       displays[i].mode.xres,
 			       displays[i].mode.yres);
+
+#ifdef CONFIG_IMX_HDMI
+			if (!strcmp(displays[i].mode.name, "HDMI"))
+				imx_enable_hdmi_phy();
+#endif
 		} else
 			printf("LCD %s cannot be configured: %d\n",
 			       displays[i].mode.name, ret);
@@ -50,15 +77,10 @@ int board_video_skip(void)
 		return -EINVAL;
 	}
 
-	return 0;
+	return ret;
 }
 
-#ifdef CONFIG_IMX_HDMI
-#include <asm/arch/mxc_hdmi.h>
-#include <asm/io.h>
-int detect_hdmi(struct display_info_t const *dev)
+int ipu_displays_init(void)
 {
-	struct hdmi_regs *hdmi	= (struct hdmi_regs *)HDMI_ARB_BASE_ADDR;
-	return readb(&hdmi->phy_stat0) & HDMI_DVI_STAT;
+	return board_video_skip();
 }
-#endif

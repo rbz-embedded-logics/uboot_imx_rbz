@@ -7,6 +7,7 @@
 #ifndef __SYS_PROTO_IMX6_
 #define __SYS_PROTO_IMX6_
 
+#include <asm/gpio.h>
 #include <asm/mach-imx/sys_proto.h>
 #include <asm/arch/iomux.h>
 
@@ -18,7 +19,15 @@
 				   USBPHY_PWD_RXPWDRX))
 
 int imx6_pcie_toggle_power(void);
-int imx6_pcie_toggle_reset(void);
+int imx6_pcie_toggle_reset(struct gpio_desc *gpio, bool active_high);
+
+enum ldo_reg {
+	LDO_ARM,
+	LDO_SOC,
+	LDO_PU,
+};
+
+int set_ldo_voltage(enum ldo_reg ldo, u32 mv);
 
 /**
  * iomuxc_set_rgmii_io_voltage - set voltage level of RGMII/USB pins
@@ -29,5 +38,17 @@ static inline void iomuxc_set_rgmii_io_voltage(int io_vol)
 {
 	__raw_writel(io_vol, IOMUXC_SW_PAD_CTL_GRP_DDR_TYPE_RGMII);
 }
+
+void set_wdog_reset(struct wdog_regs *wdog);
+enum boot_device get_boot_device(void);
+
+#ifdef CONFIG_LDO_BYPASS_CHECK
+int check_ldo_bypass(void);
+int check_1_2G(void);
+int set_anatop_bypass(int wdog_reset_pin);
+void ldo_mode_set(int ldo_bypass);
+void prep_anatop_bypass(void);
+void finish_anatop_bypass(void);
+#endif
 
 #endif /* __SYS_PROTO_IMX6_ */

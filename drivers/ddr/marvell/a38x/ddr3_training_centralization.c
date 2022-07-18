@@ -4,6 +4,7 @@
  */
 
 #include "ddr3_init.h"
+#include "mv_ddr_regs.h"
 
 #define VALIDATE_WIN_LENGTH(e1, e2, maxsize)		\
 	(((e2) + 1 > (e1) + (u8)MIN_WINDOW_SIZE) &&	\
@@ -54,6 +55,7 @@ static int ddr3_tip_centralization(u32 dev_num, u32 mode)
 	enum hws_training_ip_stat training_result[MAX_INTERFACE_NUM];
 	u32 if_id, pattern_id, bit_id;
 	u8 bus_id;
+	u8 current_byte_status;
 	u8 cur_start_win[BUS_WIDTH_IN_BITS];
 	u8 centralization_result[MAX_INTERFACE_NUM][BUS_WIDTH_IN_BITS];
 	u8 cur_end_win[BUS_WIDTH_IN_BITS];
@@ -165,6 +167,10 @@ static int ddr3_tip_centralization(u32 dev_num, u32 mode)
 						  result[search_dir_id][7]));
 				}
 
+				current_byte_status =
+					mv_ddr_tip_sub_phy_byte_status_get(if_id,
+									   bus_id);
+
 				for (bit_id = 0; bit_id < BUS_WIDTH_IN_BITS;
 				     bit_id++) {
 					/* check if this code is valid for 2 edge, probably not :( */
@@ -173,11 +179,34 @@ static int ddr3_tip_centralization(u32 dev_num, u32 mode)
 							       [HWS_LOW2HIGH]
 							       [bit_id],
 							       EDGE_1);
+					if (current_byte_status &
+					    (BYTE_SPLIT_OUT_MIX |
+					     BYTE_HOMOGENEOUS_SPLIT_OUT)) {
+						if (cur_start_win[bit_id] >= 64)
+							cur_start_win[bit_id] -= 64;
+						else
+							cur_start_win[bit_id] = 0;
+						DEBUG_CENTRALIZATION_ENGINE
+							(DEBUG_LEVEL_INFO,
+							 ("pattern %d IF %d pup %d bit %d subtract 64 adll from start\n",
+							  pattern_id, if_id, bus_id, bit_id));
+					}
 					cur_end_win[bit_id] =
 						GET_TAP_RESULT(result
 							       [HWS_HIGH2LOW]
 							       [bit_id],
 							       EDGE_1);
+					if (cur_end_win[bit_id] >= 64 &&
+					    (current_byte_status &
+					     (BYTE_SPLIT_OUT_MIX |
+					      BYTE_HOMOGENEOUS_SPLIT_OUT))) {
+						cur_end_win[bit_id] -= 64;
+						DEBUG_CENTRALIZATION_ENGINE
+							(DEBUG_LEVEL_INFO,
+							 ("pattern %d IF %d pup %d bit %d subtract 64 adll from end\n",
+							  pattern_id, if_id, bus_id, bit_id));
+					}
+
 					/* window length */
 					current_window[bit_id] =
 						cur_end_win[bit_id] -
@@ -697,6 +726,8 @@ int ddr3_tip_print_centralization_result(u32 dev_num)
 	u32 if_id = 0, bus_id = 0;
 	u32 octets_per_if_num = ddr3_tip_dev_attr_get(dev_num, MV_ATTR_OCTET_PER_INTERFACE);
 	struct mv_ddr_topology_map *tm = mv_ddr_topology_map_get();
+
+	dev_num = dev_num;
 
 	printf("Centralization Results\n");
 	printf("I/F0 Result[0 - success 1-fail 2 - state_2 3 - state_3] ...\n");

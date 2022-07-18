@@ -13,14 +13,10 @@
 
 /* Booting Linux */
 #define CONFIG_BOOTFILE		"zImage"
-#define CONFIG_LOADADDR		0x01000000
-#define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
 /* Ethernet on SoC (EMAC) */
 #if defined(CONFIG_CMD_NET)
 #define CONFIG_ARP_TIMEOUT		500UL
-
-/* PHY */
 #endif
 
 /* The rest of the configuration is shared */

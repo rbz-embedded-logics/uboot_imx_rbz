@@ -4,6 +4,8 @@
  */
 
 #include "ddr3_init.h"
+#include "mv_ddr_regs.h"
+#include "ddr_training_ip_db.h"
 
 #define PATTERN_1	0x55555555
 #define PATTERN_2	0xaaaaaaaa
@@ -860,8 +862,11 @@ int ddr3_tip_load_all_pattern_to_mem(u32 dev_num)
 			      DUAL_DUNIT_CFG_REG, (1 << 3), (1 << 3)));
 	}
 
-	for (pattern = 0; pattern < PATTERN_LAST; pattern++)
+	for (pattern = 0; pattern < PATTERN_LAST; pattern++) {
+		if (pattern == PATTERN_TEST)
+			continue;
 		ddr3_tip_load_pattern_to_mem(dev_num, pattern);
+	}
 
 	return MV_OK;
 }

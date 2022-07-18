@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2014 Freescale Semiconductor, Inc.
+ * Copyright 2021 NXP
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <init.h>
+#include <net.h>
+#include <vsprintf.h>
 #include <asm/arch/clock.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/immap_ls102xa.h>
 #include <asm/cache.h>
@@ -14,6 +20,8 @@
 #include <fsl_esdhc.h>
 #include <config.h>
 #include <fsl_wdog.h>
+#include <linux/delay.h>
+#include <dm.h>
 
 #include "fsl_epu.h"
 
@@ -26,7 +34,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_SYS_DCACHE_OFF
+#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
 
 /*
  * Bit[1] of the descriptor indicates the descriptor type,
@@ -215,7 +223,7 @@ void enable_caches(void)
 	invalidate_dcache_all();
 	set_cr(get_cr() | CR_C);
 }
-#endif /* #ifndef CONFIG_SYS_DCACHE_OFF */
+#endif /* #if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF) */
 
 
 uint get_svr(void)
@@ -288,15 +296,15 @@ int print_cpuinfo(void)
 #endif
 
 #ifdef CONFIG_FSL_ESDHC
-int cpu_mmc_init(bd_t *bis)
+int cpu_mmc_init(struct bd_info *bis)
 {
 	return fsl_esdhc_mmc_init(bis);
 }
 #endif
 
-int cpu_eth_init(bd_t *bis)
+int cpu_eth_init(struct bd_info *bis)
 {
-#ifdef CONFIG_TSEC_ENET
+#if defined(CONFIG_TSEC_ENET) && !defined(CONFIG_DM_ETH)
 	tsec_standard_init(bis);
 #endif
 
@@ -310,6 +318,8 @@ int arch_cpu_init(void)
 		(void *)(CONFIG_SYS_DCSRBAR + DCSR_RCPM2_BLOCK_OFFSET);
 	struct ccsr_scfg *scfg = (void *)CONFIG_SYS_FSL_SCFG_ADDR;
 	u32 state;
+
+	icache_enable();
 
 	/*
 	 * The RCPM FSM state may not be reset after power-on.
@@ -367,7 +377,7 @@ void smp_kick_all_cpus(void)
 }
 #endif
 
-void reset_cpu(ulong addr)
+void reset_cpu(void)
 {
 	struct watchdog_regs *wdog = (struct watchdog_regs *)WDOG1_BASE_ADDR;
 
@@ -389,3 +399,19 @@ void arch_preboot_os(void)
 	ctrl &= ~ARCH_TIMER_CTRL_ENABLE;
 	asm("mcr p15, 0, %0, c14, c2, 1" : : "r" (ctrl));
 }
+
+#ifdef CONFIG_ARCH_MISC_INIT
+int arch_misc_init(void)
+{
+	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
+		struct udevice *dev;
+		int ret;
+
+		ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(caam_jr), &dev);
+		if (ret)
+			printf("Failed to initialize caam_jr: %d\n", ret);
+	}
+
+	return 0;
+}
+#endif

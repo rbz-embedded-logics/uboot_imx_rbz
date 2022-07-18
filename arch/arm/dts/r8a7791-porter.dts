@@ -31,7 +31,7 @@
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel rw root=/dev/nfs ip=dhcp";
+		bootargs = "ignore_loglevel rw root=/dev/nfs ip=on";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -63,8 +63,7 @@
 
 		gpios = <&gpio2 12 GPIO_ACTIVE_HIGH>;
 		gpios-states = <1>;
-		states = <3300000 1
-			  1800000 0>;
+		states = <3300000 1>, <1800000 0>;
 	};
 
 	vcc_sdhi2: regulator-vcc-sdhi2 {
@@ -85,8 +84,7 @@
 
 		gpios = <&gpio2 26 GPIO_ACTIVE_HIGH>;
 		gpios-states = <1>;
-		states = <3300000 1
-			  1800000 0>;
+		states = <3300000 1>, <1800000 0>;
 	};
 
 	hdmi-out {
@@ -225,6 +223,11 @@
 
 	phy1_pins: phy1 {
 		groups = "intc_irq0";
+		function = "intc";
+	};
+
+	pmic_irq_pins: pmicirq {
+		groups = "intc_irq2";
 		function = "intc";
 	};
 
@@ -372,8 +375,43 @@
 	clock-frequency = <400000>;
 };
 
+&i2c6 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pmic_irq_pins>;
+	status = "okay";
+	clock-frequency = <100000>;
+
+	pmic@5a {
+		compatible = "dlg,da9063l";
+		reg = <0x5a>;
+		interrupt-parent = <&irqc0>;
+		interrupts = <2 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-controller;
+
+		wdt {
+			compatible = "dlg,da9063-watchdog";
+		};
+	};
+
+	vdd_dvfs: regulator@68 {
+		compatible = "dlg,da9210";
+		reg = <0x68>;
+		interrupt-parent = <&irqc0>;
+		interrupts = <2 IRQ_TYPE_LEVEL_LOW>;
+
+		regulator-min-microvolt = <1000000>;
+		regulator-max-microvolt = <1000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+
 &sata0 {
 	status = "okay";
+};
+
+&cpu0 {
+	cpu0-supply = <&vdd_dvfs>;
 };
 
 /* composite video input */
@@ -383,9 +421,6 @@
 	pinctrl-names = "default";
 
 	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		vin0ep: endpoint {
 			remote-endpoint = <&adv7180>;
 			bus-width = <8>;
@@ -452,8 +487,6 @@
 };
 
 &lvds0 {
-	status = "okay";
-
 	ports {
 		port@1 {
 			lvds_connector: endpoint {
@@ -476,6 +509,11 @@
 			capture  = <&ssi1>;
 		};
 	};
+};
+
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
 };
 
 &ssi1 {

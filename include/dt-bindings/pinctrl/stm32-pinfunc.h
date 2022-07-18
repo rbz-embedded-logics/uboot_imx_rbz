@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause) */
+/*
+ * Copyright (C) STMicroelectronics 2017 - All Rights Reserved
+ * Author: Torgue Alexandre <alexandre.torgue@st.com> for STMicroelectronics.
+ */
+
 #ifndef _DT_BINDINGS_STM32_PINFUNC_H
 #define _DT_BINDINGS_STM32_PINFUNC_H
 
@@ -26,5 +32,10 @@
 
 #define STM32_PINMUX(port, line, mode) (((PIN_NO(port, line)) << 8) | (mode))
 
-#endif /* _DT_BINDINGS_STM32_PINFUNC_H */
+/*  package information */
+#define STM32MP_PKG_AA	0x1
+#define STM32MP_PKG_AB	0x2
+#define STM32MP_PKG_AC	0x4
+#define STM32MP_PKG_AD	0x8
 
+#endif /* _DT_BINDINGS_STM32_PINFUNC_H */

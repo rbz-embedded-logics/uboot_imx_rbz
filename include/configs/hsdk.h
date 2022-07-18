@@ -28,19 +28,11 @@
 #define CONFIG_SYS_INIT_SP_ADDR		\
 	(CONFIG_SYS_SDRAM_BASE + 0x1000 - GENERATED_GBL_DATA_SIZE)
 
-#define CONFIG_SYS_MALLOC_LEN		SZ_2M
 #define CONFIG_SYS_BOOTM_LEN		SZ_128M
-#define CONFIG_SYS_LOAD_ADDR		0x82000000
-
-/*
- * This board might be of different versions so handle it
- */
-#define CONFIG_BOARD_TYPES
 
 /*
  * UART configuration
  */
-#define CONFIG_DW_SERIAL
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_CLK		33330000
 #define CONFIG_SYS_NS16550_MEM32
@@ -48,7 +40,6 @@
 /*
  * Ethernet PHY configuration
  */
-#define CONFIG_MII
 
 /*
  * USB 1.1 configuration
@@ -59,8 +50,6 @@
 /*
  * Environment settings
  */
-#define CONFIG_ENV_SIZE			SZ_16K
-
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"upgrade=if mmc rescan && " \
 		"fatload mmc 0:1 ${loadaddr} u-boot-update.scr && " \
@@ -115,12 +104,6 @@ setenv core_iccm_3 0x6; setenv core_dccm_3 0x6;\0"
  * Environment configuration
  */
 #define CONFIG_BOOTFILE			"uImage"
-#define CONFIG_LOADADDR			CONFIG_SYS_LOAD_ADDR
-
-/*
- * Misc utility configuration
- */
-#define CONFIG_BOUNCE_BUFFER
 
 /* Cli configuration */
 #define CONFIG_SYS_CBSIZE		SZ_2K
@@ -128,6 +111,5 @@ setenv core_iccm_3 0x6; setenv core_dccm_3 0x6;\0"
 /*
  * Callback configuration
  */
-#define CONFIG_BOARD_LATE_INIT
 
 #endif /* _CONFIG_HSDK_H_ */

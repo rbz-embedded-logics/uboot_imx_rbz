@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ * Copyright 2019 NXP
  */
 
 #include <config.h>
@@ -15,13 +16,14 @@
 	str r3, [r2, #0x40]
 	ldr r3, =0x01000000
 	str r3, [r2, #0x500]
+
 	ldr r3, =0x80808080
 	str r3, [r2, #0x50c]
-	ldr r3, =0x00140000
+	ldr r3, =0x00160002
 	str r3, [r2, #0x508]
-	ldr r3, =0x00000004
+	ldr r3, =0x00000001
 	str r3, [r2, #0x510]
-	ldr r3, =0x00000002
+	ldr r3, =0x00000014
 	str r3, [r2, #0x514]
 	ldr r3, =0x00000001
 	str r3, [r2, #0x500]
@@ -33,7 +35,7 @@ wait1:
 	cmp r4, r3
 	bne wait1
 
-	ldr r3, =0x8080801E
+	ldr r3, =0x8080801B
 	str r3, [r2, #0x50c]
 
 	ldr r3, =0x00000040
@@ -106,23 +108,17 @@ wait2:
 	str r1, [r0, #0x9c]
 	ldr r1, =0x00040000
 	str r1, [r0, #0xe0]
-	ldr r1, =0x00040000
-	str r1, [r0, #0xe4]
 
 	ldr r0, =0x40ab0000
 	ldr r1, =0x00008000
 	str r1, [r0, #0x1c]
+	ldr r1, =0x1B3E80AF
+	str r1, [r0, #0x85c]
 	ldr r1, =0xA1390003
 	str r1, [r0, #0x800]
-	ldr r1, =0x0D3900A0
-	str r1, [r0, #0x85c]
 	ldr r1, =0x00400000
 	str r1, [r0, #0x890]
 
-	ldr r1, =0x40404040
-	str r1, [r0, #0x848]
-	ldr r1, =0x40404040
-	str r1, [r0, #0x850]
 	ldr r1, =0x33333333
 	str r1, [r0, #0x81c]
 	ldr r1, =0x33333333
@@ -132,29 +128,26 @@ wait2:
 	ldr r1, =0x33333333
 	str r1, [r0, #0x828]
 
-	ldr r1, =0xf3333333
-	str r1, [r0, #0x82c]
-	ldr r1, =0xf3333333
-	str r1, [r0, #0x830]
-	ldr r1, =0xf3333333
-	str r1, [r0, #0x834]
-	ldr r1, =0xf3333333
-	str r1, [r0, #0x838]
-
 	ldr r1, =0x24922492
 	str r1, [r0, #0x8c0]
+	ldr r1, =0x36363838
+	str r1, [r0, #0x848]
+	ldr r1, =0x34323C36
+	str r1, [r0, #0x850]
+	ldr r1, =0x20000000
+	str r1, [r0, #0x83c]
+	ldr r1, =0x00000000
+	str r1, [r0, #0x840]
 	ldr r1, =0x00000800
 	str r1, [r0, #0x8b8]
 
-	ldr r1, =0x00020052
-	str r1, [r0, #0x4]
-	ldr r1, =0x292C42F3
+	ldr r1, =0x2D314313
 	str r1, [r0, #0xc]
-	ldr r1, =0x00100A22
+	ldr r1, =0x00020012
+	str r1, [r0, #0x4]
+	ldr r1, =0xB6AE0B22
 	str r1, [r0, #0x10]
-	ldr r1, =0x00120556
-	str r1, [r0, #0x38]
-	ldr r1, =0x00C700DB
+	ldr r1, =0x00C70123
 	str r1, [r0, #0x14]
 	ldr r1, =0x00211718
 	str r1, [r0, #0x18]
@@ -163,46 +156,48 @@ wait2:
 	str r1, [r0, #0x2c]
 	ldr r1, =0x009F0E10
 	str r1, [r0, #0x30]
+	ldr r1, =0x00150667
+	str r1, [r0, #0x38]
 	ldr r1, =0x0000003F
 	str r1, [r0, #0x40]
 	ldr r1, =0xC3190000
 	str r1, [r0, #0x0]
 
-	ldr r1, =0x00008050
+	ldr r1, =0x00008010
 	str r1, [r0, #0x1c]
-	ldr r1, =0x00008058
+	ldr r1, =0x00008018
 	str r1, [r0, #0x1c]
 	ldr r1, =0x003F8030
 	str r1, [r0, #0x1c]
-	ldr r1, =0x003F8038
-	str r1, [r0, #0x1c]
 	ldr r1, =0xFF0A8030
-	str r1, [r0, #0x1c]
-	ldr r1, =0xFF0A8038
-	str r1, [r0, #0x1c]
-	ldr r1, =0x04028030
-	str r1, [r0, #0x1c]
-	ldr r1, =0x04028038
 	str r1, [r0, #0x1c]
 	ldr r1, =0x83018030
 	str r1, [r0, #0x1c]
-	ldr r1, =0x83018038
+	ldr r1, =0x04028030
 	str r1, [r0, #0x1c]
 	ldr r1, =0x01038030
+	str r1, [r0, #0x1c]
+	ldr r1, =0x003F8038
+	str r1, [r0, #0x1c]
+	ldr r1, =0xFF0A8038
+	str r1, [r0, #0x1c]
+	ldr r1, =0x83018038
+	str r1, [r0, #0x1c]
+	ldr r1, =0x04028038
 	str r1, [r0, #0x1c]
 	ldr r1, =0x01038038
 	str r1, [r0, #0x1c]
 
-	ldr r1, =0x20000000
+	ldr r1, =0xA0000000
+	str r1, [r0, #0x83c]
+	ldr r1, =0xA0000000
 	str r1, [r0, #0x83c]
 
 	ldr r1, =0x00001800
 	str r1, [r0, #0x20]
-	ldr r1, =0xA1310000
-	str r1, [r0, #0x800]
 	ldr r1, =0x00020052
 	str r1, [r0, #0x4]
-	ldr r1, =0x00011006
+	ldr r1, =0x00010106
 	str r1, [r0, #0x404]
 	ldr r1, =0x00000000
 	str r1, [r0, #0x1c]

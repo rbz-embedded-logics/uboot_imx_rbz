@@ -6,7 +6,6 @@
 
 #include <asm-offsets.h>
 #include <config.h>
-#include "version.h"
 #include <asm/cache.h>
 
 #define _START	_start
@@ -38,10 +37,10 @@
 _vectors:
 #if defined(CONFIG_CF_SBF)
 INITSP:	.long	0			/* Initial SP	*/
-INITPC:	.long	ASM_DRAMINIT		/* Initial PC 	*/
+INITPC:	.long	ASM_DRAMINIT		/* Initial PC	*/
 #else
 INITSP:	.long	0			/* Initial SP	*/
-INITPC:	.long	_START			/* Initial PC 	*/
+INITPC:	.long	_START			/* Initial PC	*/
 #endif
 
 vector02_0F:
@@ -378,14 +377,15 @@ _start:
 	clr.l	%sp@-
 
 	/* run low-level board init code (from flash) */
-	bsr	board_init_f
+	move.l	#board_init_f, %a1
+	jsr	(%a1)
 
 	/* board_init_f() does not return */
 
 /******************************************************************************/
 
 /*
- * void relocate_code (addr_sp, gd, addr_moni)
+ * void relocate_code(addr_sp, gd, addr_moni)
  *
  * This "function" does not return, instead it continues in RAM
  * after relocating the monitor code.
@@ -488,7 +488,4 @@ _int_handler:
 
 /******************************************************************************/
 
-.globl version_string
-version_string:
-.ascii U_BOOT_VERSION_STRING, "\0"
 .align 4

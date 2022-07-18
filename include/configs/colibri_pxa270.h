@@ -12,30 +12,12 @@
 /*
  * High Level Board Configuration Options
  */
-#define	CONFIG_CPU_PXA27X		1	/* Marvell PXA270 CPU */
 /* Avoid overwriting factory configuration block */
 #define CONFIG_BOARD_SIZE_LIMIT		0x40000
-
-/* We will never enable dcache because we have to setup MMU first */
-#define CONFIG_SYS_DCACHE_OFF
 
 /*
  * Environment settings
  */
-#define	CONFIG_ENV_OVERWRITE
-#define	CONFIG_SYS_MALLOC_LEN		(128 * 1024)
-#define	CONFIG_ARCH_CPU_INIT
-#define	CONFIG_BOOTCOMMAND						\
-	"if fatload mmc 0 0xa0000000 uImage; then "			\
-		"bootm 0xa0000000; "					\
-	"fi; "								\
-	"if usb reset && fatload usb 0 0xa0000000 uImage; then "	\
-		"bootm 0xa0000000; "					\
-	"fi; "								\
-	"bootm 0xc0000;"
-#define	CONFIG_TIMESTAMP
-#define	CONFIG_CMDLINE_TAG
-#define	CONFIG_SETUP_MEMORY_TAGS
 
 /*
  * Serial Console Configuration
@@ -46,11 +28,10 @@
  */
 
 /* I2C support */
-#ifdef CONFIG_SYS_I2C
+#if CONFIG_IS_ENABLED(SYS_I2C_LEGACY)
 #define CONFIG_SYS_I2C_PXA
 #define CONFIG_PXA_STD_I2C
 #define CONFIG_PXA_PWR_I2C
-#define CONFIG_SYS_I2C_SPEED		100000
 #endif
 
 /* LCD support */
@@ -74,8 +55,6 @@
 #define	CONFIG_BOOTP_BOOTFILESIZE
 #endif
 
-#define	CONFIG_SYS_DEVICE_NULLDEV	1
-
 /*
  * Clock Configuration
  */
@@ -84,17 +63,12 @@
 /*
  * DRAM Map
  */
-#define	CONFIG_NR_DRAM_BANKS		1		/* We have 1 bank of DRAM */
 #define	PHYS_SDRAM_1			0xa0000000	/* SDRAM Bank #1 */
 #define	PHYS_SDRAM_1_SIZE		0x04000000	/* 64 MB */
 
 #define	CONFIG_SYS_DRAM_BASE		0xa0000000	/* CS0 */
 #define	CONFIG_SYS_DRAM_SIZE		0x04000000	/* 64 MB DRAM */
 
-#define CONFIG_SYS_MEMTEST_START	0xa0400000	/* memtest works on */
-#define CONFIG_SYS_MEMTEST_END		0xa0800000	/* 4 ... 8 MB in DRAM */
-
-#define	CONFIG_SYS_LOAD_ADDR		PHYS_SDRAM_1
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
 #define	CONFIG_SYS_INIT_SP_ADDR		0x5c010000
 
@@ -106,30 +80,20 @@
 #define	PHYS_FLASH_SIZE			0x02000000	/* 32 MB */
 #define	CONFIG_SYS_FLASH_BASE		PHYS_FLASH_1
 
-#define	CONFIG_SYS_FLASH_CFI
-#define	CONFIG_FLASH_CFI_DRIVER		1
 #define	CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_32BIT
 
 #define	CONFIG_SYS_MAX_FLASH_SECT	(4 + 255)
-#define	CONFIG_SYS_MAX_FLASH_BANKS	1
 
 #define	CONFIG_SYS_FLASH_ERASE_TOUT	(25 * CONFIG_SYS_HZ)
 #define	CONFIG_SYS_FLASH_WRITE_TOUT	(25 * CONFIG_SYS_HZ)
 #define	CONFIG_SYS_FLASH_LOCK_TOUT	(25 * CONFIG_SYS_HZ)
 #define	CONFIG_SYS_FLASH_UNLOCK_TOUT	(25 * CONFIG_SYS_HZ)
-
-#define	CONFIG_SYS_FLASH_USE_BUFFER_WRITE	1
-#define	CONFIG_SYS_FLASH_PROTECTION		1
 #endif
 
 #define	CONFIG_SYS_MONITOR_BASE		0x0
 #define	CONFIG_SYS_MONITOR_LEN		0x40000
 
 /* Skip factory configuration block */
-#define	CONFIG_ENV_ADDR			\
-			(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN + 0x40000)
-#define	CONFIG_ENV_SIZE			0x40000
-#define	CONFIG_ENV_SECT_SIZE		0x40000
 
 /*
  * GPIO settings

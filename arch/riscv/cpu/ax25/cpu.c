@@ -6,9 +6,25 @@
 
 /* CPU specific code */
 #include <common.h>
-#include <command.h>
-#include <watchdog.h>
+#include <cpu_func.h>
+#include <irq_func.h>
 #include <asm/cache.h>
+#include <asm/csr.h>
+
+#define CSR_MCACHE_CTL	0x7ca
+#define CSR_MMISC_CTL	0x7d0
+#define CSR_MARCHID		0xf12
+
+#define V5_MCACHE_CTL_IC_EN_OFFSET      0
+#define V5_MCACHE_CTL_DC_EN_OFFSET      1
+#define V5_MCACHE_CTL_DC_COHEN_OFFSET	19
+#define V5_MCACHE_CTL_DC_COHSTA_OFFSET	20
+
+#define V5_MCACHE_CTL_IC_EN		BIT(V5_MCACHE_CTL_IC_EN_OFFSET)
+#define V5_MCACHE_CTL_DC_EN				BIT(V5_MCACHE_CTL_DC_EN_OFFSET)
+#define V5_MCACHE_CTL_DC_COHEN_EN       BIT(V5_MCACHE_CTL_DC_COHEN_OFFSET)
+#define V5_MCACHE_CTL_DC_COHSTA_EN      BIT(V5_MCACHE_CTL_DC_COHSTA_OFFSET)
+
 
 /*
  * cleanup_before_linux() is called just before we call linux
@@ -21,12 +37,35 @@ int cleanup_before_linux(void)
 	disable_interrupts();
 
 	/* turn off I/D-cache */
+	cache_flush();
+	icache_disable();
+	dcache_disable();
 
 	return 0;
 }
 
-int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+void harts_early_init(void)
 {
-	disable_interrupts();
-	panic("ax25-ae350 wdt not support yet.\n");
+	if (CONFIG_IS_ENABLED(RISCV_MMODE)) {
+		unsigned long long mcache_ctl_val = csr_read(CSR_MCACHE_CTL);
+
+		if (!(mcache_ctl_val & V5_MCACHE_CTL_DC_COHEN_EN))
+			mcache_ctl_val |= V5_MCACHE_CTL_DC_COHEN_EN;
+		if (!(mcache_ctl_val & V5_MCACHE_CTL_IC_EN))
+			mcache_ctl_val |= V5_MCACHE_CTL_IC_EN;
+		if (!(mcache_ctl_val & V5_MCACHE_CTL_DC_EN))
+			mcache_ctl_val |= V5_MCACHE_CTL_DC_EN;
+		csr_write(CSR_MCACHE_CTL, mcache_ctl_val);
+
+		/*
+		 * Check DC_COHEN_EN, if cannot write to mcache_ctl,
+		 * we assume this bitmap not support L2 CM
+		 */
+		mcache_ctl_val = csr_read(CSR_MCACHE_CTL);
+		if ((mcache_ctl_val & V5_MCACHE_CTL_DC_COHEN_EN)) {
+		/* Wait for DC_COHSTA bit be set */
+			while (!(mcache_ctl_val & V5_MCACHE_CTL_DC_COHSTA_EN))
+				mcache_ctl_val = csr_read(CSR_MCACHE_CTL);
+		}
+	}
 }

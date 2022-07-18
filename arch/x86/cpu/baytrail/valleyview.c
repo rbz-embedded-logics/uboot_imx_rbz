@@ -4,12 +4,14 @@
  */
 
 #include <common.h>
+#include <init.h>
 #include <mmc.h>
 #include <pci_ids.h>
 #include <asm/irq.h>
 #include <asm/mrccache.h>
 #include <asm/post.h>
 #include <asm/arch/iomap.h>
+#include <linux/bitops.h>
 
 /* GPIO SUS */
 #define GPIO_SUS_PAD_BASE	(IO_BASE_ADDRESS + IO_BASE_OFFSET_GPSSUS)
@@ -54,10 +56,4 @@ int arch_misc_init(void)
 		     BYT_TRIG_LVL | BYT_TRIG_POS);
 
 	return 0;
-}
-
-void reset_cpu(ulong addr)
-{
-	/* cold reset */
-	x86_full_reset();
 }

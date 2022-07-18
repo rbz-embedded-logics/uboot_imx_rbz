@@ -8,7 +8,6 @@
 
 /dts-v1/;
 #include "r8a77970.dtsi"
-#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Renesas Eagle board based on r8a77970";
@@ -17,12 +16,56 @@
 	aliases {
 		serial0 = &scif0;
 		ethernet0 = &avb;
-		spi0 = &rpc;
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel rw root=/dev/nfs ip=dhcp";
+		bootargs = "ignore_loglevel rw root=/dev/nfs ip=on";
 		stdout-path = "serial0:115200n8";
+	};
+
+	d3p3: regulator-fixed {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	hdmi-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con_out: endpoint {
+				remote-endpoint = <&adv7511_out>;
+			};
+		};
+	};
+
+	lvds-decoder {
+		compatible = "thine,thc63lvd1024";
+
+		vcc-supply = <&d3p3>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
 	};
 
 	memory@48000000 {
@@ -33,8 +76,9 @@
 };
 
 &avb {
-	pinctrl-0 = <&avb0_pins>;
+	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
+
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	phy-mode = "rgmii-id";
@@ -45,8 +89,21 @@
 		reg = <0>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
-		reset-gpios = <&gpio1 16 GPIO_ACTIVE_LOW>;
 	};
+};
+
+&canfd {
+	pinctrl-0 = <&canfd0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+};
+
+&du {
+	status = "okay";
 };
 
 &extal_clk {
@@ -70,14 +127,61 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 	};
+
+	hdmi@39 {
+		compatible = "adi,adv7511w";
+		reg = <0x39>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+
+		adi,input-depth = <8>;
+		adi,input-colorspace = "rgb";
+		adi,input-clock = "1x";
+		adi,input-style = <1>;
+		adi,input-justification = "evenly";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adv7511_in: endpoint {
+					remote-endpoint = <&thc63lvd1024_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adv7511_out: endpoint {
+					remote-endpoint = <&hdmi_con_out>;
+				};
+			};
+		};
+	};
+};
+
+&lvds0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&thc63lvd1024_in>;
+			};
+		};
+	};
 };
 
 &pfc {
-	avb0_pins: avb {
-		mux {
-			groups = "avb0_link", "avb0_mdio", "avb0_rgmii", "avb0_txcrefclk";
-			function = "avb0";
-		};
+	avb_pins: avb0 {
+		groups = "avb0_mdio", "avb0_rgmii", "avb0_txcrefclk";
+		function = "avb0";
+	};
+
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data_a";
+		function = "canfd0";
 	};
 
 	i2c0_pins: i2c0 {
@@ -88,25 +192,6 @@
 	scif0_pins: scif0 {
 		groups = "scif0_data";
 		function = "scif0";
-	};
-};
-
-&rpc {
-	num-cs = <1>;
-	status = "okay";
-	spi-max-frequency = <50000000>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	flash0: spi-flash@0 {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "s25fs512s", "spi-flash", "jedec,spi-nor";
-		spi-max-frequency = <50000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
-		reg = <0>;
-		status = "okay";
 	};
 };
 

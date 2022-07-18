@@ -60,7 +60,11 @@ struct sunxi_ccm_reg {
 	u32 reserved11;
 	u32 sata_clk_cfg;	/* 0xc8 SATA clock control (R40 only) */
 	u32 usb_clk_cfg;	/* 0xcc USB clock control */
-	u32 gmac_clk_cfg;	/* 0xd0 GMAC clock control */
+#ifdef CONFIG_MACH_SUN8I_R40
+	u32 cir0_clk_cfg;	/* 0xd0 CIR0 clock control (R40 only) */
+#else
+	u32 gmac_clk_cfg;	/* 0xd0 GMAC clock control (not for R40) */
+#endif
 	u32 reserved12[7];
 	u32 mdfs_clk_cfg;	/* 0xf0 MDFS clock control */
 	u32 dram_clk_cfg;	/* 0xf4 DRAM configuration clock control */
@@ -103,7 +107,11 @@ struct sunxi_ccm_reg {
 	u32 mtc_clk_cfg;	/* 0x158 MTC module clock */
 	u32 mbus0_clk_cfg;	/* 0x15c MBUS0 module clock */
 	u32 mbus1_clk_cfg;	/* 0x160 MBUS1 module clock */
+#ifdef CONFIG_MACH_SUN8I_R40
+	u32 gmac_clk_cfg;	/* 0x164 GMAC clock control (R40 only) */
+#else
 	u32 reserved16;
+#endif
 	u32 mipi_dsi_clk_cfg;	/* 0x168 MIPI DSI clock control */
 	u32 mipi_csi_clk_cfg;	/* 0x16c MIPI CSI clock control */
 	u32 reserved17[4];
@@ -218,7 +226,12 @@ struct sunxi_ccm_reg {
 #define CCM_PLL5_CTRL_SIGMA_DELTA_EN	(0x1 << 24)
 #define CCM_PLL5_CTRL_EN		(0x1 << 31)
 
+#ifdef CONFIG_MACH_SUNIV
+/* suniv pll6 doesn't have postdiv 2, so k is set to 0 */
+#define PLL6_CFG_DEFAULT		0x90041801
+#else
 #define PLL6_CFG_DEFAULT		0x90041811 /* 600 MHz */
+#endif
 
 #define CCM_PLL6_CTRL_N_SHIFT		8
 #define CCM_PLL6_CTRL_N_MASK		(0x1f << CCM_PLL6_CTRL_N_SHIFT)
@@ -479,6 +492,14 @@ struct sunxi_ccm_reg {
 /* ahb_reset2 offsets */
 #define AHB_RESET_OFFSET_EPHY		2
 #define AHB_RESET_OFFSET_LVDS		0
+
+/* apb1 reset */
+#ifdef CONFIG_MACH_SUNIV
+#define APB1_GATE_UART_SHIFT	(20)
+#define APB1_GATE_TWI_SHIFT	(16)
+#define APB1_RESET_UART_SHIFT	(20)
+#define APB1_RESET_TWI_SHIFT	(16)
+#endif
 
 /* apb2 reset */
 #define APB2_RESET_UART_SHIFT		(16)

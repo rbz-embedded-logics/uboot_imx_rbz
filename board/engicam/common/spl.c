@@ -6,7 +6,11 @@
  */
 
 #include <common.h>
+#include <image.h>
+#include <init.h>
+#include <serial.h>
 #include <spl.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/gpio.h>
@@ -414,7 +418,8 @@ void board_init_f(ulong dummy)
 	/* setup AIPS and disable watchdog */
 	arch_cpu_init();
 
-	gpr_init();
+	if (!(is_mx6ul()))
+		gpr_init();
 
 	/* iomux */
 	SETUP_IOMUX_PADS(uart_pads);

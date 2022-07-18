@@ -4,7 +4,9 @@
  */
 
 #include "ddr3_init.h"
-
+#include "mv_ddr_common.h"
+#include "mv_ddr_training_db.h"
+#include "mv_ddr_regs.h"
 #include "mv_ddr_sys_env_lib.h"
 
 #define DDR_INTERFACES_NUM		1
@@ -58,42 +60,42 @@ static struct dlb_config *sys_env_dlb_config_ptr_get(void)
 	return &ddr3_dlb_config_table[0];
 }
 
-static u8 a38x_bw_per_freq[DDR_FREQ_LAST] = {
-	0x3,			/* DDR_FREQ_100 */
-	0x4,			/* DDR_FREQ_400 */
-	0x4,			/* DDR_FREQ_533 */
-	0x5,			/* DDR_FREQ_667 */
-	0x5,			/* DDR_FREQ_800 */
-	0x5,			/* DDR_FREQ_933 */
-	0x5,			/* DDR_FREQ_1066 */
-	0x3,			/* DDR_FREQ_311 */
-	0x3,			/* DDR_FREQ_333 */
-	0x4,			/* DDR_FREQ_467 */
-	0x5,			/* DDR_FREQ_850 */
-	0x5,			/* DDR_FREQ_600 */
-	0x3,			/* DDR_FREQ_300 */
-	0x5,			/* DDR_FREQ_900 */
-	0x3,			/* DDR_FREQ_360 */
-	0x5			/* DDR_FREQ_1000 */
+static u8 a38x_bw_per_freq[MV_DDR_FREQ_LAST] = {
+	0x3,			/* MV_DDR_FREQ_100 */
+	0x4,			/* MV_DDR_FREQ_400 */
+	0x4,			/* MV_DDR_FREQ_533 */
+	0x5,			/* MV_DDR_FREQ_667 */
+	0x5,			/* MV_DDR_FREQ_800 */
+	0x5,			/* MV_DDR_FREQ_933 */
+	0x5,			/* MV_DDR_FREQ_1066 */
+	0x3,			/* MV_DDR_FREQ_311 */
+	0x3,			/* MV_DDR_FREQ_333 */
+	0x4,			/* MV_DDR_FREQ_467 */
+	0x5,			/* MV_DDR_FREQ_850 */
+	0x5,			/* MV_DDR_FREQ_600 */
+	0x3,			/* MV_DDR_FREQ_300 */
+	0x5,			/* MV_DDR_FREQ_900 */
+	0x3,			/* MV_DDR_FREQ_360 */
+	0x5			/* MV_DDR_FREQ_1000 */
 };
 
-static u8 a38x_rate_per_freq[DDR_FREQ_LAST] = {
-	0x1,			/* DDR_FREQ_100 */
-	0x2,			/* DDR_FREQ_400 */
-	0x2,			/* DDR_FREQ_533 */
-	0x2,			/* DDR_FREQ_667 */
-	0x2,			/* DDR_FREQ_800 */
-	0x3,			/* DDR_FREQ_933 */
-	0x3,			/* DDR_FREQ_1066 */
-	0x1,			/* DDR_FREQ_311 */
-	0x1,			/* DDR_FREQ_333 */
-	0x2,			/* DDR_FREQ_467 */
-	0x2,			/* DDR_FREQ_850 */
-	0x2,			/* DDR_FREQ_600 */
-	0x1,			/* DDR_FREQ_300 */
-	0x2,			/* DDR_FREQ_900 */
-	0x1,			/* DDR_FREQ_360 */
-	0x2			/* DDR_FREQ_1000 */
+static u8 a38x_rate_per_freq[MV_DDR_FREQ_LAST] = {
+	0x1,			/* MV_DDR_FREQ_100 */
+	0x2,			/* MV_DDR_FREQ_400 */
+	0x2,			/* MV_DDR_FREQ_533 */
+	0x2,			/* MV_DDR_FREQ_667 */
+	0x2,			/* MV_DDR_FREQ_800 */
+	0x3,			/* MV_DDR_FREQ_933 */
+	0x3,			/* MV_DDR_FREQ_1066 */
+	0x1,			/* MV_DDR_FREQ_311 */
+	0x1,			/* MV_DDR_FREQ_333 */
+	0x2,			/* MV_DDR_FREQ_467 */
+	0x2,			/* MV_DDR_FREQ_850 */
+	0x2,			/* MV_DDR_FREQ_600 */
+	0x1,			/* MV_DDR_FREQ_300 */
+	0x2,			/* MV_DDR_FREQ_900 */
+	0x1,			/* MV_DDR_FREQ_360 */
+	0x2			/* MV_DDR_FREQ_1000 */
 };
 
 static u16 a38x_vco_freq_per_sar_ref_clk_25_mhz[] = {
@@ -165,8 +167,6 @@ static u16 a38x_vco_freq_per_sar_ref_clk_40_mhz[] = {
 };
 
 
-static u32 async_mode_at_tf;
-
 static u32 dq_bit_map_2_phy_pin[] = {
 	1, 0, 2, 6, 9, 8, 3, 7,	/* 0 */
 	8, 9, 1, 7, 2, 6, 3, 0,	/* 1 */
@@ -177,10 +177,11 @@ static u32 dq_bit_map_2_phy_pin[] = {
 
 void mv_ddr_mem_scrubbing(void)
 {
+	ddr3_new_tip_ecc_scrub();
 }
 
 static int ddr3_tip_a38x_set_divider(u8 dev_num, u32 if_id,
-				     enum hws_ddr_freq freq);
+				     enum mv_ddr_freq freq);
 
 /*
  * Read temperature TJ value
@@ -219,7 +220,7 @@ static u32 ddr3_ctrl_get_junc_temp(u8 dev_num)
  * Notes:
  * Returns:  MV_OK if success, other error code if fail.
  */
-static int ddr3_tip_a38x_get_freq_config(u8 dev_num, enum hws_ddr_freq freq,
+static int ddr3_tip_a38x_get_freq_config(u8 dev_num, enum mv_ddr_freq freq,
 				  struct hws_tip_freq_config_info
 				  *freq_config_info)
 {
@@ -377,13 +378,13 @@ static int ddr3_tip_a38x_select_ddr_controller(u8 dev_num, int enable)
 
 static u8 ddr3_tip_clock_mode(u32 frequency)
 {
-	if ((frequency == DDR_FREQ_LOW_FREQ) || (freq_val[frequency] <= 400))
+	if ((frequency == MV_DDR_FREQ_LOW_FREQ) || (mv_ddr_freq_get(frequency) <= 400))
 		return 1;
 
 	return 2;
 }
 
-static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
+static int mv_ddr_sar_freq_get(int dev_num, enum mv_ddr_freq *freq)
 {
 	u32 reg, ref_clk_satr;
 
@@ -402,7 +403,7 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 					      reg));
 			/* fallthrough */
 		case 0x0:
-			*freq = DDR_FREQ_333;
+			*freq = MV_DDR_FREQ_333;
 			break;
 		case 0x3:
 			DEBUG_TRAINING_ACCESS(DEBUG_LEVEL_ERROR,
@@ -410,7 +411,7 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 					      reg));
 			/* fallthrough */
 		case 0x2:
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0xd:
 			DEBUG_TRAINING_ACCESS(DEBUG_LEVEL_ERROR,
@@ -418,10 +419,10 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 					      reg));
 			/* fallthrough */
 		case 0x4:
-			*freq = DDR_FREQ_533;
+			*freq = MV_DDR_FREQ_533;
 			break;
 		case 0x6:
-			*freq = DDR_FREQ_600;
+			*freq = MV_DDR_FREQ_600;
 			break;
 		case 0x11:
 		case 0x14:
@@ -430,7 +431,7 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 					      reg));
 			/* fallthrough */
 		case 0x8:
-			*freq = DDR_FREQ_667;
+			*freq = MV_DDR_FREQ_667;
 			break;
 		case 0x15:
 		case 0x1b:
@@ -439,16 +440,16 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 					      reg));
 			/* fallthrough */
 		case 0xc:
-			*freq = DDR_FREQ_800;
+			*freq = MV_DDR_FREQ_800;
 			break;
 		case 0x10:
-			*freq = DDR_FREQ_933;
+			*freq = MV_DDR_FREQ_933;
 			break;
 		case 0x12:
-			*freq = DDR_FREQ_900;
+			*freq = MV_DDR_FREQ_900;
 			break;
 		case 0x13:
-			*freq = DDR_FREQ_933;
+			*freq = MV_DDR_FREQ_933;
 			break;
 		default:
 			*freq = 0;
@@ -457,16 +458,16 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 	} else { /* REFCLK 40MHz case */
 		switch (reg) {
 		case 0x3:
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0x5:
-			*freq = DDR_FREQ_533;
+			*freq = MV_DDR_FREQ_533;
 			break;
 		case 0xb:
-			*freq = DDR_FREQ_800;
+			*freq = MV_DDR_FREQ_800;
 			break;
 		case 0x1e:
-			*freq = DDR_FREQ_900;
+			*freq = MV_DDR_FREQ_900;
 			break;
 		default:
 			*freq = 0;
@@ -477,7 +478,7 @@ static int mv_ddr_sar_freq_get(int dev_num, enum hws_ddr_freq *freq)
 	return MV_OK;
 }
 
-static int ddr3_tip_a38x_get_medium_freq(int dev_num, enum hws_ddr_freq *freq)
+static int ddr3_tip_a38x_get_medium_freq(int dev_num, enum mv_ddr_freq *freq)
 {
 	u32 reg, ref_clk_satr;
 
@@ -493,37 +494,37 @@ static int ddr3_tip_a38x_get_medium_freq(int dev_num, enum hws_ddr_freq *freq)
 		case 0x0:
 		case 0x1:
 			/* Medium is same as TF to run PBS in this freq */
-			*freq = DDR_FREQ_333;
+			*freq = MV_DDR_FREQ_333;
 			break;
 		case 0x2:
 		case 0x3:
 			/* Medium is same as TF to run PBS in this freq */
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0x4:
 		case 0xd:
 			/* Medium is same as TF to run PBS in this freq */
-			*freq = DDR_FREQ_533;
+			*freq = MV_DDR_FREQ_533;
 			break;
 		case 0x8:
 		case 0x10:
 		case 0x11:
 		case 0x14:
-			*freq = DDR_FREQ_333;
+			*freq = MV_DDR_FREQ_333;
 			break;
 		case 0xc:
 		case 0x15:
 		case 0x1b:
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0x6:
-			*freq = DDR_FREQ_300;
+			*freq = MV_DDR_FREQ_300;
 			break;
 		case 0x12:
-			*freq = DDR_FREQ_360;
+			*freq = MV_DDR_FREQ_360;
 			break;
 		case 0x13:
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		default:
 			*freq = 0;
@@ -533,17 +534,17 @@ static int ddr3_tip_a38x_get_medium_freq(int dev_num, enum hws_ddr_freq *freq)
 		switch (reg) {
 		case 0x3:
 			/* Medium is same as TF to run PBS in this freq */
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0x5:
 			/* Medium is same as TF to run PBS in this freq */
-			*freq = DDR_FREQ_533;
+			*freq = MV_DDR_FREQ_533;
 			break;
 		case 0xb:
-			*freq = DDR_FREQ_400;
+			*freq = MV_DDR_FREQ_400;
 			break;
 		case 0x1e:
-			*freq = DDR_FREQ_360;
+			*freq = MV_DDR_FREQ_360;
 			break;
 		default:
 			*freq = 0;
@@ -556,11 +557,7 @@ static int ddr3_tip_a38x_get_medium_freq(int dev_num, enum hws_ddr_freq *freq)
 
 static int ddr3_tip_a38x_get_device_info(u8 dev_num, struct ddr3_device_info *info_ptr)
 {
-#if defined(CONFIG_ARMADA_39X)
-	info_ptr->device_id = 0x6900;
-#else
 	info_ptr->device_id = 0x6800;
-#endif
 	info_ptr->ck_delay = ck_delay;
 
 	return MV_OK;
@@ -663,11 +660,7 @@ static int mv_ddr_sw_db_init(u32 dev_num, u32 board_id)
 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_TIP_REV, MV_TIP_REV_4);
 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_PHY_EDGE, MV_DDR_PHY_EDGE_POSITIVE);
 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_OCTET_PER_INTERFACE, DDR_INTERFACE_OCTETS_NUM);
-#ifdef CONFIG_ARMADA_39X
-	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_INTERLEAVE_WA, 1);
-#else
 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_INTERLEAVE_WA, 0);
-#endif
 
 	ca_delay = 0;
 	delay_enable = 1;
@@ -682,7 +675,7 @@ static int mv_ddr_sw_db_init(u32 dev_num, u32 board_id)
 static int mv_ddr_training_mask_set(void)
 {
 	struct mv_ddr_topology_map *tm = mv_ddr_topology_map_get();
-	enum hws_ddr_freq ddr_freq = tm->interface_params[0].memory_freq;
+	enum mv_ddr_freq ddr_freq = tm->interface_params[0].memory_freq;
 
 	mask_tune_func = (SET_LOW_FREQ_MASK_BIT |
 			  LOAD_PATTERN_MASK_BIT |
@@ -699,7 +692,7 @@ static int mv_ddr_training_mask_set(void)
 			  CENTRALIZATION_TX_MASK_BIT);
 	rl_mid_freq_wa = 1;
 
-	if ((ddr_freq == DDR_FREQ_333) || (ddr_freq == DDR_FREQ_400)) {
+	if ((ddr_freq == MV_DDR_FREQ_333) || (ddr_freq == MV_DDR_FREQ_400)) {
 		mask_tune_func = (WRITE_LEVELING_MASK_BIT |
 				  LOAD_PATTERN_2_MASK_BIT |
 				  WRITE_LEVELING_SUPP_MASK_BIT |
@@ -712,7 +705,7 @@ static int mv_ddr_training_mask_set(void)
 	}
 
 	/* Supplementary not supported for ECC modes */
-	if (1 == ddr3_if_ecc_enabled()) {
+	if (mv_ddr_is_ecc_ena()) {
 		mask_tune_func &= ~WRITE_LEVELING_SUPP_TF_MASK_BIT;
 		mask_tune_func &= ~WRITE_LEVELING_SUPP_MASK_BIT;
 		mask_tune_func &= ~PBS_TX_MASK_BIT;
@@ -734,11 +727,13 @@ void mv_ddr_set_calib_controller(void)
 }
 
 static int ddr3_tip_a38x_set_divider(u8 dev_num, u32 if_id,
-				     enum hws_ddr_freq frequency)
+				     enum mv_ddr_freq frequency)
 {
 	u32 divider = 0;
 	u32 sar_val, ref_clk_satr;
 	u32 async_val;
+	u32 cpu_freq;
+	u32 ddr_freq = mv_ddr_freq_get(frequency);
 
 	if (if_id != 0) {
 		DEBUG_TRAINING_ACCESS(DEBUG_LEVEL_ERROR,
@@ -755,11 +750,14 @@ static int ddr3_tip_a38x_set_divider(u8 dev_num, u32 if_id,
 	ref_clk_satr = reg_read(DEVICE_SAMPLE_AT_RESET2_REG);
 	if (((ref_clk_satr >> DEVICE_SAMPLE_AT_RESET2_REG_REFCLK_OFFSET) & 0x1) ==
 	    DEVICE_SAMPLE_AT_RESET2_REG_REFCLK_25MHZ)
-		divider = a38x_vco_freq_per_sar_ref_clk_25_mhz[sar_val] / freq_val[frequency];
+		cpu_freq = a38x_vco_freq_per_sar_ref_clk_25_mhz[sar_val];
 	else
-		divider = a38x_vco_freq_per_sar_ref_clk_40_mhz[sar_val] / freq_val[frequency];
+		cpu_freq = a38x_vco_freq_per_sar_ref_clk_40_mhz[sar_val];
 
-	if ((async_mode_at_tf == 1) && (freq_val[frequency] > 400)) {
+	divider = cpu_freq / ddr_freq;
+
+	if (((cpu_freq % ddr_freq != 0) || (divider != 2 && divider != 3)) &&
+	    (ddr_freq > 400)) {
 		/* Set async mode */
 		dunit_write(0x20220, 0x1000, 0x1000);
 		dunit_write(0xe42f4, 0x200, 0x200);
@@ -769,42 +767,38 @@ static int ddr3_tip_a38x_set_divider(u8 dev_num, u32 if_id,
 
 		/* Set KNL values */
 		switch (frequency) {
-#ifdef CONFIG_DDR3
-		case DDR_FREQ_467:
+		case MV_DDR_FREQ_467:
 			async_val = 0x806f012;
 			break;
-		case DDR_FREQ_533:
+		case MV_DDR_FREQ_533:
 			async_val = 0x807f012;
 			break;
-		case DDR_FREQ_600:
+		case MV_DDR_FREQ_600:
 			async_val = 0x805f00a;
 			break;
-#endif
-		case DDR_FREQ_667:
+		case MV_DDR_FREQ_667:
 			async_val = 0x809f012;
 			break;
-		case DDR_FREQ_800:
+		case MV_DDR_FREQ_800:
 			async_val = 0x807f00a;
 			break;
-#ifdef CONFIG_DDR3
-		case DDR_FREQ_850:
+		case MV_DDR_FREQ_850:
 			async_val = 0x80cb012;
 			break;
-#endif
-		case DDR_FREQ_900:
+		case MV_DDR_FREQ_900:
 			async_val = 0x80d7012;
 			break;
-		case DDR_FREQ_933:
+		case MV_DDR_FREQ_933:
 			async_val = 0x80df012;
 			break;
-		case DDR_FREQ_1000:
+		case MV_DDR_FREQ_1000:
 			async_val = 0x80ef012;
 			break;
-		case DDR_FREQ_1066:
+		case MV_DDR_FREQ_1066:
 			async_val = 0x80ff012;
 			break;
 		default:
-			/* set DDR_FREQ_667 as default */
+			/* set MV_DDR_FREQ_667 as default */
 			async_val = 0x809f012;
 		}
 		dunit_write(0xe42f0, 0xffffffff, async_val);
@@ -877,8 +871,6 @@ int ddr3_tip_ext_write(u32 dev_num, u32 if_id, u32 reg_addr,
 
 int mv_ddr_early_init(void)
 {
-	struct mv_ddr_topology_map *tm = mv_ddr_topology_map_get();
-
 	/* FIXME: change this configuration per ddr type
 	 * configure a380 and a390 to work with receiver odt timing
 	 * the odt_config is defined:
@@ -889,9 +881,6 @@ int mv_ddr_early_init(void)
 	 */
 
 	mv_ddr_sw_db_init(0, 0);
-
-	if (tm->interface_params[0].memory_freq != DDR_FREQ_SAR)
-		async_mode_at_tf = 1;
 
 	return MV_OK;
 }
@@ -934,7 +923,7 @@ int ddr3_silicon_post_init(void)
 
 u32 mv_ddr_init_freq_get(void)
 {
-	enum hws_ddr_freq freq;
+	enum mv_ddr_freq freq;
 
 	mv_ddr_sar_freq_get(0, &freq);
 
@@ -1016,7 +1005,7 @@ int ddr3_calc_mem_cs_size(u32 cs, uint64_t *cs_size)
 		return MV_BAD_VALUE;
 	}
 
-	*cs_size = cs_mem_size << 20; /* write cs size in bytes */
+	*cs_size = cs_mem_size;
 
 	return MV_OK;
 }
@@ -1025,8 +1014,10 @@ static int ddr3_fast_path_dynamic_cs_size_config(u32 cs_ena)
 {
 	u32 reg, cs;
 	uint64_t mem_total_size = 0;
+	uint64_t cs_mem_size_mb = 0;
 	uint64_t cs_mem_size = 0;
 	uint64_t mem_total_size_c, cs_mem_size_c;
+
 
 #ifdef DEVICE_MAX_DRAM_ADDRESS_SIZE
 	u32 physical_mem_size;
@@ -1038,8 +1029,9 @@ static int ddr3_fast_path_dynamic_cs_size_config(u32 cs_ena)
 	for (cs = 0; cs < MAX_CS_NUM; cs++) {
 		if (cs_ena & (1 << cs)) {
 			/* get CS size */
-			if (ddr3_calc_mem_cs_size(cs, &cs_mem_size) != MV_OK)
+			if (ddr3_calc_mem_cs_size(cs, &cs_mem_size_mb) != MV_OK)
 				return MV_FAIL;
+			cs_mem_size = cs_mem_size_mb * _1M;
 
 #ifdef DEVICE_MAX_DRAM_ADDRESS_SIZE
 			/*
@@ -1088,6 +1080,7 @@ static int ddr3_fast_path_dynamic_cs_size_config(u32 cs_ena)
 			 */
 			mem_total_size_c = (mem_total_size >> 16) & 0xffffffffffff;
 			cs_mem_size_c = (cs_mem_size >> 16) & 0xffffffffffff;
+
 			/* if the sum less than 2 G - calculate the value */
 			if (mem_total_size_c + cs_mem_size_c < 0x10000)
 				mem_total_size += cs_mem_size;

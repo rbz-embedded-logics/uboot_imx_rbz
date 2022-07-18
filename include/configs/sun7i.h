@@ -12,12 +12,6 @@
  * A20 specific configuration
  */
 
-#ifdef CONFIG_USB_EHCI_HCD
-#define CONFIG_USB_EHCI_SUNXI
-#endif
-
-#define CONFIG_SUNXI_USB_PHYS	3
-
 #define CONFIG_ARMV7_SECURE_BASE	SUNXI_SRAM_B_BASE
 #define CONFIG_ARMV7_SECURE_MAX_SIZE	(64 * 1024) /* 64 KB */
 
@@ -25,7 +19,5 @@
  * Include common sunxi configuration where most the settings are
  */
 #include <configs/sunxi-common.h>
-
-#define CONFIG_MACH_TYPE	(4283 | ((CONFIG_MACH_TYPE_COMPAT_REV) << 28))
 
 #endif /* __CONFIG_H */

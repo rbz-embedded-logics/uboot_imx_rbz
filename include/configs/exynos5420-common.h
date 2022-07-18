@@ -12,16 +12,8 @@
 
 #define CONFIG_EXYNOS5_DT
 
-/* Provide the MACH_TYPE value that the vendor kernel requires. */
-#define CONFIG_MACH_TYPE		8002
-
 #define CONFIG_VAR_SIZE_SPL
 
-#ifdef CONFIG_VAR_SIZE_SPL
-#define CONFIG_SPL_TEXT_BASE		0x02024410
-#else
-#define CONFIG_SPL_TEXT_BASE		0x02024400
-#endif
 #define CONFIG_IRAM_TOP			0x02074000
 
 #define CONFIG_SPL_MAX_FOOTPRINT	(30 * 1024)

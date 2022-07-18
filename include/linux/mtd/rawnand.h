@@ -15,6 +15,8 @@
 
 #include <config.h>
 
+#include <dm/device.h>
+#include <linux/bitops.h>
 #include <linux/compat.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/flashchip.h>
@@ -53,7 +55,7 @@ void nand_wait_ready(struct mtd_info *mtd);
  * is supported now. If you add a chip with bigger oobsize/page
  * adjust this accordingly.
  */
-#define NAND_MAX_OOBSIZE       1664
+#define NAND_MAX_OOBSIZE       1872
 #define NAND_MAX_PAGESIZE      16384
 
 /*
@@ -142,6 +144,12 @@ typedef enum {
 	NAND_ECC_HW_OOB_FIRST,
 	NAND_ECC_SOFT_BCH,
 } nand_ecc_modes_t;
+
+enum nand_ecc_algo {
+	NAND_ECC_UNKNOWN,
+	NAND_ECC_HAMMING,
+	NAND_ECC_BCH,
+};
 
 /*
  * Constants for Hardware ECC
@@ -492,6 +500,13 @@ struct nand_hw_control {
 	struct nand_chip *active;
 };
 
+static inline void nand_hw_control_init(struct nand_hw_control *nfc)
+{
+	nfc->active = NULL;
+	spin_lock_init(&nfc->lock);
+	init_waitqueue_head(&nfc->wq);
+}
+
 /**
  * struct nand_ecc_step_info - ECC step information of ECC engine
  * @stepsize: data bytes per ECC step
@@ -533,6 +548,7 @@ static const struct nand_ecc_caps __name = {			\
 /**
  * struct nand_ecc_ctrl - Control structure for ECC
  * @mode:	ECC mode
+ * @algo:	ECC algorithm
  * @steps:	number of ECC steps per page
  * @size:	data bytes per ECC step
  * @bytes:	ECC bytes per step
@@ -583,6 +599,7 @@ static const struct nand_ecc_caps __name = {			\
  */
 struct nand_ecc_ctrl {
 	nand_ecc_modes_t mode;
+	enum nand_ecc_algo algo;
 	int steps;
 	int size;
 	int bytes;
@@ -874,7 +891,7 @@ struct nand_chip {
 	void __iomem *IO_ADDR_R;
 	void __iomem *IO_ADDR_W;
 
-	int flash_node;
+	ofnode flash_node;
 
 	uint8_t (*read_byte)(struct mtd_info *mtd);
 	u16 (*read_word)(struct mtd_info *mtd);
@@ -928,7 +945,7 @@ struct nand_chip {
 	int jedec_version;
 	struct nand_onfi_params	onfi_params;
 	struct nand_jedec_params jedec_params;
- 
+
 	struct nand_data_interface *data_interface;
 
 	int read_retries;
@@ -952,6 +969,17 @@ struct nand_chip {
 
 	void *priv;
 };
+
+static inline void nand_set_flash_node(struct nand_chip *chip,
+				       ofnode node)
+{
+	chip->flash_node = node;
+}
+
+static inline ofnode nand_get_flash_node(struct nand_chip *chip)
+{
+	return chip->flash_node;
+}
 
 static inline struct nand_chip *mtd_to_nand(struct mtd_info *mtd)
 {
@@ -1272,4 +1300,34 @@ int nand_maximize_ecc(struct nand_chip *chip,
 
 /* Reset and initialize a NAND device */
 int nand_reset(struct nand_chip *chip, int chipnr);
+
+/* NAND operation helpers */
+int nand_reset_op(struct nand_chip *chip);
+int nand_readid_op(struct nand_chip *chip, u8 addr, void *buf,
+		   unsigned int len);
+int nand_status_op(struct nand_chip *chip, u8 *status);
+int nand_exit_status_op(struct nand_chip *chip);
+int nand_erase_op(struct nand_chip *chip, unsigned int eraseblock);
+int nand_read_page_op(struct nand_chip *chip, unsigned int page,
+		      unsigned int offset_in_page, void *buf, unsigned int len);
+int nand_change_read_column_op(struct nand_chip *chip,
+			       unsigned int offset_in_page, void *buf,
+			       unsigned int len, bool force_8bit);
+int nand_read_oob_op(struct nand_chip *chip, unsigned int page,
+		     unsigned int offset_in_page, void *buf, unsigned int len);
+int nand_prog_page_begin_op(struct nand_chip *chip, unsigned int page,
+			    unsigned int offset_in_page, const void *buf,
+			    unsigned int len);
+int nand_prog_page_end_op(struct nand_chip *chip);
+int nand_prog_page_op(struct nand_chip *chip, unsigned int page,
+		      unsigned int offset_in_page, const void *buf,
+		      unsigned int len);
+int nand_change_write_column_op(struct nand_chip *chip,
+				unsigned int offset_in_page, const void *buf,
+				unsigned int len, bool force_8bit);
+int nand_read_data_op(struct nand_chip *chip, void *buf, unsigned int len,
+		      bool force_8bit);
+int nand_write_data_op(struct nand_chip *chip, const void *buf,
+		       unsigned int len, bool force_8bit);
+
 #endif /* __LINUX_MTD_RAWNAND_H */
