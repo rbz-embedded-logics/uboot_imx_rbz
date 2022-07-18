@@ -8,7 +8,6 @@
 
 #include <common.h>
 #include <i2c.h>
-#include <init.h>
 #include <asm/io.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-ddr.h>

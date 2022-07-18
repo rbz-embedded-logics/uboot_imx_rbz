@@ -5,13 +5,10 @@
  */
 
 #include <common.h>
-#include <init.h>
 #include <mmc.h>
-#include <fsl_esdhc_imx.h>
+#include <fsl_esdhc.h>
 #include <miiphy.h>
-#include <net.h>
 #include <netdev.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -116,7 +113,7 @@ int board_mmc_getcd(struct mmc *mmc)
 	return 0;
 }
 
-int board_mmc_init(struct bd_info *bis)
+int board_mmc_init(bd_t *bis)
 {
 	imx_iomux_v3_setup_multiple_pads(usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
 	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
@@ -164,7 +161,7 @@ int board_phy_config(struct phy_device *phydev)
 	return platinum_phy_config(phydev);
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	return cpu_eth_init(bis);
 }

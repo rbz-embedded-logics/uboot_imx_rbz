@@ -37,14 +37,14 @@
  * mtdids=<idmap>[,<idmap>,...]
  *
  * <idmap>    := <dev-id>=<mtd-id>
- * <dev-id>   := 'nand'|'nor'|'onenand'|'spi-nand'<dev-num>
+ * <dev-id>   := 'nand'|'nor'|'onenand'<dev-num>
  * <dev-num>  := mtd device number, 0...
  * <mtd-id>   := unique device tag used by linux kernel to find mtd device (mtd->name)
  *
  *
  * 'mtdparts' - partition list
  *
- * mtdparts=[mtdparts=]<mtd-def>[;<mtd-def>...]
+ * mtdparts=mtdparts=<mtd-def>[;<mtd-def>...]
  *
  * <mtd-def>  := <mtd-id>:<part-def>[,<part-def>...]
  * <mtd-id>   := unique device tag used by linux kernel to find mtd device (mtd->name)
@@ -62,20 +62,17 @@
  *
  * 1 NOR Flash, with 1 single writable partition:
  * mtdids=nor0=edb7312-nor
- * mtdparts=[mtdparts=]edb7312-nor:-
+ * mtdparts=mtdparts=edb7312-nor:-
  *
  * 1 NOR Flash with 2 partitions, 1 NAND with one
  * mtdids=nor0=edb7312-nor,nand0=edb7312-nand
- * mtdparts=[mtdparts=]edb7312-nor:256k(ARMboot)ro,-(root);edb7312-nand:-(home)
+ * mtdparts=mtdparts=edb7312-nor:256k(ARMboot)ro,-(root);edb7312-nand:-(home)
  *
  */
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <log.h>
 #include <malloc.h>
-#include <asm/global_data.h>
 #include <jffs2/load_kernel.h>
 #include <linux/list.h>
 #include <linux/ctype.h>
@@ -160,40 +157,6 @@ static struct part_info* mtd_part_info(struct mtd_device *dev, unsigned int part
 static struct mtdids* id_find_by_mtd_id(const char *mtd_id, unsigned int mtd_id_len);
 static int device_del(struct mtd_device *dev);
 
-#ifdef CONFIG_MTDPARTS_SKIP_INVALID
-int skip_counter = 0;
-/*
- * find a seperator to locate the next entry
- * @param p pointer of the pointer of input char string
- * @param sp seperator charactor
- * @param n find the nth seperator
- * @param limit the looking scope
- * @return 1 on success, otherwise 0
- */
-static int find_seperator(const char **p, char sp, int n, int limit)
-{
-	int i, j;
-
-	/* n = 0 means do nothing */
-	if (!n)
-		return 1;
-
-	i = j = 0;
-
-	while (*p && (**p != '\0') && (i < limit)) {
-		if (**p == sp) {
-			(*p)++;
-			j++;
-			if (j == n)
-				return 1;
-		}
-		(*p)++;
-		i++;
-	}
-
-	return 0;
-}
-#endif
 /**
  * Parses a string into a number.  The number stored at ptr is
  * potentially suffixed with K (for kilobytes, or 1024 bytes),
@@ -214,16 +177,13 @@ static u64 memsize_parse (const char *const ptr, const char **retptr)
 		case 'G':
 		case 'g':
 			ret <<= 10;
-			/* Fallthrough */
 		case 'M':
 		case 'm':
 			ret <<= 10;
-			/* Fallthrough */
 		case 'K':
 		case 'k':
 			ret <<= 10;
 			(*retptr)++;
-			/* Fallthrough */
 		default:
 			break;
 	}
@@ -376,7 +336,7 @@ static int part_validate_eraseblock(struct mtdids *id, struct part_info *part)
 
 	if (!mtd->numeraseregions) {
 		/*
-		 * Only one eraseregion (NAND, SPI-NAND, OneNAND or uniform NOR),
+		 * Only one eraseregion (NAND, OneNAND or uniform NOR),
 		 * checking for alignment is easy here
 		 */
 		offset = part->offset;
@@ -730,7 +690,7 @@ static int part_parse(const char *const partdef, const char **ret, struct part_i
 		part->auto_name = 0;
 	} else {
 		/* auto generated name in form of size@offset */
-		snprintf(part->name, name_len, "0x%08llx@0x%08llx", size, offset);
+		sprintf(part->name, "0x%08llx@0x%08llx", size, offset);
 		part->auto_name = 1;
 	}
 
@@ -1067,7 +1027,7 @@ static struct mtdids* id_find_by_mtd_id(const char *mtd_id, unsigned int mtd_id_
 }
 
 /**
- * Parse device id string <dev-id> := 'nand'|'nor'|'onenand'|'spi-nand'<dev-num>,
+ * Parse device id string <dev-id> := 'nand'|'nor'|'onenand'<dev-num>,
  * return device type and number.
  *
  * @param id string describing device id
@@ -1091,9 +1051,6 @@ int mtd_id_parse(const char *id, const char **ret_id, u8 *dev_type,
 	} else if (strncmp(p, "onenand", 7) == 0) {
 		*dev_type = MTD_DEV_TYPE_ONENAND;
 		p += 7;
-	} else if (strncmp(p, "spi-nand", 8) == 0) {
-		*dev_type = MTD_DEV_TYPE_SPINAND;
-		p += 8;
 	} else {
 		printf("incorrect device type in %s\n", id);
 		return 1;
@@ -1135,6 +1092,9 @@ static int generate_mtdparts(char *buf, u32 buflen)
 		buf[0] = '\0';
 		return 0;
 	}
+
+	strcpy(p, "mtdparts=");
+	p += 9;
 
 	list_for_each(dentry, &devices) {
 		dev = list_entry(dentry, struct mtd_device, link);
@@ -1269,11 +1229,11 @@ static uint64_t net_part_size(struct mtd_info *mtd, struct part_info *part)
 {
 	uint64_t i, net_size = 0;
 
-	if (!mtd->_block_isbad)
+	if (!mtd->block_isbad)
 		return part->size;
 
 	for (i = 0; i < part->size; i += mtd->erasesize) {
-		if (!mtd->_block_isbad(mtd, part->offset + i))
+		if (!mtd->block_isbad(mtd, part->offset + i))
 			net_size += mtd->erasesize;
 	}
 
@@ -1310,7 +1270,7 @@ static void print_partition_table(void)
 			part = list_entry(pentry, struct part_info, link);
 			net_size = net_part_size(mtd, part);
 			size_note = part->size == net_size ? " " : " (!)";
-			printf("%2d: %-20s0x%08llx\t0x%08x%s\t0x%08llx\t%d\n",
+			printf("%2d: %-20s0x%08x\t0x%08x%s\t0x%08x\t%d\n",
 					part_num, part->name, part->size,
 					net_size, size_note, part->offset,
 					part->mask_flags);
@@ -1606,18 +1566,14 @@ static int parse_mtdparts(const char *const mtdparts)
 	if (!p)
 		p = mtdparts;
 
-	/* Skip the useless prefix, if any */
-	if (strncmp(p, "mtdparts=", 9) == 0)
-		p += 9;
+	if (strncmp(p, "mtdparts=", 9) != 0) {
+		printf("mtdparts variable doesn't start with 'mtdparts='\n");
+		return err;
+	}
+	p += 9;
 
 	while (*p != '\0') {
 		err = 1;
-#ifdef CONFIG_MTDPARTS_SKIP_INVALID
-		if (!find_seperator(&p, ';', skip_counter, MTDPARTS_MAXLEN)) {
-			printf("goes wrong when skip invalid parts\n");
-			return 1;
-		}
-#endif
 		if ((device_parse(p, &p, &dev) != 0) || (!dev))
 			break;
 
@@ -1677,7 +1633,7 @@ static int parse_mtdids(const char *const ids)
 	while(p && (*p != '\0')) {
 
 		ret = 1;
-		/* parse 'nor'|'nand'|'onenand'|'spi-nand'<dev-num> */
+		/* parse 'nor'|'nand'|'onenand'<dev-num> */
 		if (mtd_id_parse(p, &p, &type, &num) != 0)
 			break;
 
@@ -1688,20 +1644,8 @@ static int parse_mtdids(const char *const ids)
 		p++;
 
 		/* check if requested device exists */
-		if (mtd_device_validate(type, num, &size) != 0) {
-#ifdef CONFIG_MTDPARTS_SKIP_INVALID
-			if (find_seperator(&p, ',', 1, MTDIDS_MAXLEN)) {
-				printf("current device is invalid, skip it and check the next one\n");
-				skip_counter++;
-				continue;
-			} else {
-				printf("the only deivce is invalid\n");
-				return 1;
-			}
-#else
+		if (mtd_device_validate(type, num, &size) != 0)
 			return 1;
-#endif
-		}
 
 		/* locate <mtd-id> */
 		mtd_id = p;
@@ -1969,8 +1913,7 @@ static struct part_info* mtd_part_info(struct mtd_device *dev, unsigned int part
  * @param argv arguments list
  * @return 0 on success, 1 otherwise
  */
-static int do_chpart(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_chpart(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 /* command line only */
 	struct mtd_device *dev;
@@ -2008,8 +1951,8 @@ static int do_chpart(struct cmd_tbl *cmdtp, int flag, int argc,
  * @param argv arguments list
  * @return 0 on success, 1 otherwise
  */
-static int do_mtdparts(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[])
+static int do_mtdparts(cmd_tbl_t *cmdtp, int flag, int argc,
+		       char * const argv[])
 {
 	if (argc == 2) {
 		if (strcmp(argv[1], "default") == 0) {
@@ -2166,7 +2109,7 @@ static char mtdparts_help_text[] =
 	"'mtdids' - linux kernel mtd device id <-> u-boot device id mapping\n\n"
 	"mtdids=<idmap>[,<idmap>,...]\n\n"
 	"<idmap>    := <dev-id>=<mtd-id>\n"
-	"<dev-id>   := 'nand'|'nor'|'onenand'|'spi-nand'<dev-num>\n"
+	"<dev-id>   := 'nand'|'nor'|'onenand'<dev-num>\n"
 	"<dev-num>  := mtd device number, 0...\n"
 	"<mtd-id>   := unique device tag used by linux kernel to find mtd device (mtd->name)\n\n"
 	"'mtdparts' - partition list\n\n"

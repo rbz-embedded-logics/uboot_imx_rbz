@@ -33,7 +33,7 @@ struct syscon_ops {
  *
  * Update: 64-bit is now supported and we have an education crisis.
  */
-struct syscon_base_plat {
+struct syscon_base_platdata {
 	fdt_val_t reg[2];
 };
 #endif
@@ -72,19 +72,6 @@ int syscon_get_by_driver_data(ulong driver_data, struct udevice **devp);
  * @return register map correponding to @driver_data, or -ve error code
  */
 struct regmap *syscon_get_regmap_by_driver_data(ulong driver_data);
-
-/**
- * syscon_regmap_lookup_by_phandle() - Look up a controller by a phandle
- *
- * This operates by looking up the given name in the device (device
- * tree property) of the device using the system controller.
- *
- * @dev:	Device using the system controller
- * @name:	Name of property referring to the system controller
- * @return	A pointer to the regmap if found, ERR_PTR(-ve) on error
- */
-struct regmap *syscon_regmap_lookup_by_phandle(struct udevice *dev,
-					       const char *name);
 
 /**
  * syscon_get_first_range() - get the first memory range from a syscon regmap

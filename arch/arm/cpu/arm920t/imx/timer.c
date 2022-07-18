@@ -13,12 +13,9 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <time.h>
 #if defined (CONFIG_IMX)
 
 #include <asm/arch/imx-regs.h>
-#include <linux/delay.h>
 
 int timer_init (void)
 {
@@ -39,17 +36,17 @@ int timer_init (void)
 /*
  * timer without interrupts
  */
-static ulong get_timer_masked (void)
-{
-	return TCN1;
-}
-
 ulong get_timer (ulong base)
 {
 	return get_timer_masked() - base;
 }
 
-void __udelay(unsigned long usec)
+ulong get_timer_masked (void)
+{
+	return TCN1;
+}
+
+void udelay_masked (unsigned long usec)
 {
 	ulong endtime = get_timer_masked() + usec;
 	signed long diff;
@@ -58,6 +55,11 @@ void __udelay(unsigned long usec)
 		ulong now = get_timer_masked ();
 		diff = endtime - now;
 	} while (diff >= 0);
+}
+
+void __udelay (unsigned long usec)
+{
+	udelay_masked(usec);
 }
 
 /*
@@ -73,7 +75,7 @@ unsigned long long get_ticks(void)
  * This function is derived from PowerPC code (timebase clock frequency).
  * On ARM it returns the number of timer ticks per second.
  */
-ulong get_tbclk(void)
+ulong get_tbclk (void)
 {
 	return CONFIG_SYS_HZ;
 }
@@ -81,7 +83,7 @@ ulong get_tbclk(void)
 /*
  * Reset the cpu by setting up the watchdog timer and let him time out
  */
-void reset_cpu(ulong ignored)
+void reset_cpu (ulong ignored)
 {
 	/* Disable watchdog and set Time-Out field to 0 */
 	WCR = 0x00000000;

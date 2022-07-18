@@ -12,10 +12,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <log.h>
 #include <asm/cache.h>
-#include <asm/global_data.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -56,7 +53,7 @@ void enable_caches(void)
 
 void dram_bank_mmu_setup(int bank)
 {
-	struct bd_info *bd = gd->bd;
+	bd_t *bd = gd->bd;
 	int	i;
 
 	u32 start = bd->bi_dram[bank].start >> MMU_SECTION_SHIFT;

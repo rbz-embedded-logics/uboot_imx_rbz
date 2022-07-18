@@ -21,6 +21,8 @@
  * Board
  */
 
+#define CONFIG_MISC_INIT_R
+
 /*
  * Clocks
  */
@@ -36,6 +38,7 @@
  * DRAM
  */
 
+#define CONFIG_NR_DRAM_BANKS	2
 #define PHYS_SDRAM_1		OMAP34XX_SDRC_CS0
 #define PHYS_SDRAM_2		OMAP34XX_SDRC_CS1
 
@@ -60,10 +63,13 @@
  * Input
  */
 
+#define CONFIG_TWL4030_INPUT
+
 /*
  * SPL
  */
 
+#define CONFIG_SPL_TEXT_BASE		0x40200000
 #define CONFIG_SPL_MAX_SIZE		(SRAM_SCRATCH_SPACE_ADDR - \
 					 CONFIG_SPL_TEXT_BASE)
 #define CONFIG_SPL_BSS_START_ADDR	0x80000000
@@ -72,6 +78,7 @@
 #define CONFIG_SYS_SPL_MALLOC_SIZE	(1024 * 1024)
 #define CONFIG_SPL_STACK		LOW_LEVEL_SRAM_STACK
 
+#define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION		1
 #define CONFIG_SPL_FS_LOAD_PAYLOAD_NAME			"u-boot.img"
 
 #define CONFIG_SYS_CBSIZE	512
@@ -94,6 +101,10 @@
 /*
  * Environment
  */
+
+#define CONFIG_ENV_SIZE		(128 * 1024)
+
+#define CONFIG_ENV_OVERWRITE
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"kernel_addr_r=0x82000000\0" \
@@ -138,5 +149,11 @@
 	"mmc dev ${boot_mmc_dev}; " \
 	"mmc read ${kernel_addr_r} ${boot_mmc_start} ${boot_mmc_size} && " \
 	"bootm ${kernel_addr_r};"
+
+/*
+ * Defaults
+ */
+
+#include <config_defaults.h>
 
 #endif

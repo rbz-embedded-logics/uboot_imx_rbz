@@ -4,15 +4,10 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <asm/armv7.h>
-#include <asm/cache.h>
 #include <asm/pl310.h>
 #include <asm/io.h>
 #include <asm/mach-imx/sys_proto.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static void enable_ca7_smp(void)
 {
@@ -42,17 +37,13 @@ static void enable_ca7_smp(void)
 	}
 }
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
-
-#define ARMV7_DOMAIN_CLIENT	1
-#define ARMV7_DOMAIN_MASK	(0x3 << 0)
-
+#ifndef CONFIG_SYS_DCACHE_OFF
 void enable_caches(void)
 {
 #if defined(CONFIG_SYS_ARM_CACHE_WRITETHROUGH)
-	enum dcache_option option = DCACHE_WRITETHROUGH & ~TTB_SECT_XN_MASK;
+	enum dcache_option option = DCACHE_WRITETHROUGH;
 #else
-	enum dcache_option option = DCACHE_WRITEBACK & ~TTB_SECT_XN_MASK;
+	enum dcache_option option = DCACHE_WRITEBACK;
 #endif
 	/* Avoid random hang when download by usb */
 	invalidate_dcache_all();
@@ -71,33 +62,6 @@ void enable_caches(void)
 					IRAM_SIZE,
 					option);
 }
-
-void dram_bank_mmu_setup(int bank)
-{
-	struct bd_info *bd = gd->bd;
-	int	i;
-
-	debug("%s: bank: %d\n", __func__, bank);
-	for (i = bd->bi_dram[bank].start >> MMU_SECTION_SHIFT;
-	     i < (bd->bi_dram[bank].start >> MMU_SECTION_SHIFT) +
-		 (bd->bi_dram[bank].size >> MMU_SECTION_SHIFT);
-	     i++)
-		set_section_dcache(i, DCACHE_DEFAULT_OPTION & ~TTB_SECT_XN_MASK);
-}
-
-void arm_init_domains(void)
-{
-	u32 reg;
-
-	reg = get_dacr();
-	/*
-	* Set domain to client to do access and XN check
-	*/
-	reg &= ~ARMV7_DOMAIN_MASK;
-	reg |= ARMV7_DOMAIN_CLIENT;
-	set_dacr(reg);
-}
-
 #else
 void enable_caches(void)
 {
@@ -118,7 +82,7 @@ void v7_outer_cache_enable(void)
 {
 	struct pl310_regs *const pl310 = (struct pl310_regs *)L2_PL310_BASE;
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-	unsigned int val, cache_id;
+	unsigned int val;
 
 
 	/*
@@ -148,24 +112,22 @@ void v7_outer_cache_enable(void)
 
 	val = readl(&pl310->pl310_prefetch_ctrl);
 
-	/* Turn on the L2 I/D prefetch, double linefill */
-	/* Set prefetch offset with any value except 23 as per errata 765569 */
-	val |= 0x7000000f;
+	/* Turn on the L2 I/D prefetch */
+	val |= 0x30000000;
 
 	/*
 	 * The L2 cache controller(PL310) version on the i.MX6D/Q is r3p1-50rel0
-	 * The L2 cache controller(PL310) version on the i.MX6DL/SOLO/SL/SX/DQP
-	 * is r3p2.
+	 * The L2 cache controller(PL310) version on the i.MX6DL/SOLO/SL is r3p2
 	 * But according to ARM PL310 errata: 752271
 	 * ID: 752271: Double linefill feature can cause data corruption
 	 * Fault Status: Present in: r3p0, r3p1, r3p1-50rel0. Fixed in r3p2
 	 * Workaround: The only workaround to this erratum is to disable the
 	 * double linefill feature. This is the default behavior.
 	 */
-	cache_id = readl(&pl310->pl310_cache_id);
-	if (((cache_id & L2X0_CACHE_ID_PART_MASK) == L2X0_CACHE_ID_PART_L310)
-	    && ((cache_id & L2X0_CACHE_ID_RTL_MASK) < L2X0_CACHE_ID_RTL_R3P2))
-		val &= ~(1 << 30);
+
+#ifndef CONFIG_MX6Q
+	val |= 0x40800000;
+#endif
 	writel(val, &pl310->pl310_prefetch_ctrl);
 
 	val = readl(&pl310->pl310_power_ctrl);

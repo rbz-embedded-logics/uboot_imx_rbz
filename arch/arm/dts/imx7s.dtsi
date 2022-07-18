@@ -46,7 +46,6 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/reset/imx7-reset.h>
 #include "imx7d-pinfunc.h"
 
 / {
@@ -56,8 +55,10 @@
 	 * The decompressor and also some bootloaders rely on a
 	 * pre-existing /chosen node to be available to insert the
 	 * command line and merge other ATAGS info.
+	 * Also for U-Boot there must be a pre-existing /memory node.
 	 */
 	chosen {};
+	memory { device_type = "memory"; };
 
 	aliases {
 		gpio0 = &gpio1;
@@ -85,10 +86,6 @@
 		spi1 = &ecspi2;
 		spi2 = &ecspi3;
 		spi3 = &ecspi4;
-		ethernet0 = &fec1;
-		usb0 = &usbotg1;
-		usbgadget0 = &usbg1;
-		video0 = &lcdif;
 	};
 
 	cpus {
@@ -145,9 +142,9 @@
 		 * non-configurable replicators don't show up on the
 		 * AMBA bus.  As such no need to add "arm,primecell"
 		 */
-		compatible = "arm,coresight-static-replicator";
+		compatible = "arm,coresight-replicator";
 
-		out-ports {
+		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
 				/* replicator output ports */
@@ -164,26 +161,25 @@
 					remote-endpoint = <&etr_in_port>;
 				};
 			};
-		};
 
-		in-ports {
-			port {
+			/* replicator input port */
+			port@2 {
+				reg = <0>;
 				replicator_in_port0: endpoint {
+					slave-mode;
 					remote-endpoint = <&etf_out_port>;
 				};
 			};
 		};
 	};
 
-	tempmon: tempmon {
-		compatible = "fsl,imx7d-tempmon";
-		interrupt-parent = <&gpc>;
-		interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
-		fsl,tempmon = <&anatop>;
-		nvmem-cells = <&tempmon_calib>,
-			<&tempmon_temp_grade>;
-		nvmem-cell-names = "calib", "temp_grade";
-		clocks = <&clks IMX7D_PLL_SYS_MAIN_CLK>;
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupt-parent = <&intc>;
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
 	soc {
@@ -194,28 +190,33 @@
 		ranges;
 
 		funnel@30041000 {
-			compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
+			compatible = "arm,coresight-funnel", "arm,primecell";
 			reg = <0x30041000 0x1000>;
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			ca_funnel_in_ports: in-ports {
-				port {
+			ca_funnel_ports: ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				/* funnel input ports */
+				port@0 {
+					reg = <0>;
 					ca_funnel_in_port0: endpoint {
+						slave-mode;
 						remote-endpoint = <&etm0_out_port>;
 					};
 				};
 
-				/* the other input ports are not connect to anything */
-			};
-
-			out-ports {
-				port {
+				/* funnel output port */
+				port@2 {
+					reg = <0>;
 					ca_funnel_out_port0: endpoint {
 						remote-endpoint = <&hugo_funnel_in_port0>;
 					};
 				};
 
+				/* the other input ports are not connect to anything */
 			};
 		};
 
@@ -226,33 +227,28 @@
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			out-ports {
-				port {
-					etm0_out_port: endpoint {
-						remote-endpoint = <&ca_funnel_in_port0>;
-					};
+			port {
+				etm0_out_port: endpoint {
+					remote-endpoint = <&ca_funnel_in_port0>;
 				};
 			};
 		};
 
-		caam_sm: caam-sm@100000 {
-			 compatible = "fsl,imx7d-caam-sm", "fsl,imx6q-caam-sm";
-			 reg = <0x100000 0x8000>;
-		};
-
 		funnel@30083000 {
-			compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
+			compatible = "arm,coresight-funnel", "arm,primecell";
 			reg = <0x30083000 0x1000>;
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			in-ports {
+			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
+				/* funnel input ports */
 				port@0 {
 					reg = <0>;
 					hugo_funnel_in_port0: endpoint {
+						slave-mode;
 						remote-endpoint = <&ca_funnel_out_port0>;
 					};
 				};
@@ -260,18 +256,18 @@
 				port@1 {
 					reg = <1>;
 					hugo_funnel_in_port1: endpoint {
-						/* M4 input */
+						slave-mode; /* M4 input */
 					};
 				};
-				/* the other input ports are not connect to anything */
-			};
 
-			out-ports {
-				port {
+				port@2 {
+					reg = <0>;
 					hugo_funnel_out_port0: endpoint {
 						remote-endpoint = <&etf_in_port>;
 					};
 				};
+
+				/* the other input ports are not connect to anything */
 			};
 		};
 
@@ -281,16 +277,20 @@
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			in-ports {
-				port {
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
 					etf_in_port: endpoint {
+						slave-mode;
 						remote-endpoint = <&hugo_funnel_out_port0>;
 					};
 				};
-			};
 
-			out-ports {
-				port {
+				port@1 {
+					reg = <0>;
 					etf_out_port: endpoint {
 						remote-endpoint = <&replicator_in_port0>;
 					};
@@ -304,11 +304,10 @@
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			in-ports {
-				port {
-					etr_in_port: endpoint {
-						remote-endpoint = <&replicator_out_port1>;
-					};
+			port {
+				etr_in_port: endpoint {
+					slave-mode;
+					remote-endpoint = <&replicator_out_port1>;
 				};
 			};
 		};
@@ -319,18 +318,17 @@
 			clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 			clock-names = "apb_pclk";
 
-			in-ports {
-				port {
-					tpiu_in_port: endpoint {
-						remote-endpoint = <&replicator_out_port0>;
-					};
+			port {
+				tpiu_in_port: endpoint {
+					slave-mode;
+					remote-endpoint = <&replicator_out_port1>;
 				};
 			};
 		};
 
 		intc: interrupt-controller@31001000 {
 			compatible = "arm,cortex-a7-gic";
-			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_HIGH)>;
+			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
 			#interrupt-cells = <3>;
 			interrupt-controller;
 			interrupt-parent = <&intc>;
@@ -338,17 +336,6 @@
 			      <0x31002000 0x2000>,
 			      <0x31004000 0x2000>,
 			      <0x31006000 0x2000>;
-		};
-
-		timer {
-			compatible = "arm,armv7-timer";
-			arm,cpu-registers-not-fw-configured;
-			interrupt-parent = <&intc>;
-			interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-				     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-				     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-				     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
-			clock-frequency = <8000000>;
 		};
 
 		aips1: aips-bus@30000000 {
@@ -483,17 +470,16 @@
 				compatible = "fsl,imx7d-gpt", "fsl,imx6sx-gpt";
 				reg = <0x302d0000 0x10000>;
 				interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_GPT1_ROOT_CLK>,
-					<&clks IMX7D_GPT1_ROOT_CLK>,
-					<&clks IMX7D_GPT_3M_CLK>;
-				clock-names = "ipg", "per", "osc_per";
+				clocks = <&clks IMX7D_CLK_DUMMY>,
+					 <&clks IMX7D_GPT1_ROOT_CLK>;
+				clock-names = "ipg", "per";
 			};
 
 			gpt2: gpt@302e0000 {
 				compatible = "fsl,imx7d-gpt", "fsl,imx6sx-gpt";
 				reg = <0x302e0000 0x10000>;
 				interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_GPT2_ROOT_CLK>,
+				clocks = <&clks IMX7D_CLK_DUMMY>,
 					 <&clks IMX7D_GPT2_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				status = "disabled";
@@ -503,7 +489,7 @@
 				compatible = "fsl,imx7d-gpt", "fsl,imx6sx-gpt";
 				reg = <0x302f0000 0x10000>;
 				interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_GPT3_ROOT_CLK>,
+				clocks = <&clks IMX7D_CLK_DUMMY>,
 					 <&clks IMX7D_GPT3_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				status = "disabled";
@@ -513,7 +499,7 @@
 				compatible = "fsl,imx7d-gpt", "fsl,imx6sx-gpt";
 				reg = <0x30300000 0x10000>;
 				interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_GPT4_ROOT_CLK>,
+				clocks = <&clks IMX7D_CLK_DUMMY>,
 					 <&clks IMX7D_GPT4_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				status = "disabled";
@@ -534,43 +520,8 @@
 
 			gpr: iomuxc-gpr@30340000 {
 				compatible = "fsl,imx7d-iomuxc-gpr",
-					"fsl,imx6q-iomuxc-gpr", "syscon",
-					"simple-mfd";
+					"fsl,imx6q-iomuxc-gpr", "syscon";
 				reg = <0x30340000 0x10000>;
-
-				mux: mux-controller {
-					compatible = "mmio-mux";
-					#mux-control-cells = <0>;
-					mux-reg-masks = <0x14 0x00000010>;
-				};
-
-				video_mux: csi-mux {
-					compatible = "video-mux";
-					mux-controls = <&mux 0>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-					status = "disabled";
-
-					port@0 {
-						reg = <0>;
-					};
-
-					port@1 {
-						reg = <1>;
-
-						csi_mux_from_mipi_vc0: endpoint {
-							remote-endpoint = <&mipi_vc0_to_csi_mux>;
-						};
-					};
-
-					port@2 {
-						reg = <2>;
-
-						csi_mux_to_csi: endpoint {
-							remote-endpoint = <&csi_from_csi_mux>;
-						};
-					};
-				};
 			};
 
 			ocotp: ocotp-ctrl@30350000 {
@@ -587,10 +538,16 @@
 				tempmon_temp_grade: temp-grade@10 {
 					reg = <0x10 0x4>;
 				};
+			};
 
-				cpu_speed_grade: speed-grade@10 {
-					reg = <0x10 0x4>;
-				};
+			tempmon: tempmon {
+				compatible = "fsl,imx7d-tempmon";
+				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+				fsl,tempmon =<&anatop>;
+				nvmem-cells = <&tempmon_calib>,
+					<&tempmon_temp_grade>;
+				nvmem-cell-names = "calib", "temp_grade";
+				clocks = <&clks IMX7D_PLL_SYS_MAIN_CLK>;
 			};
 
 			anatop: anatop@30360000 {
@@ -599,8 +556,11 @@
 				reg = <0x30360000 0x10000>;
 				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
+				#address-cells = <1>;
+				#size-cells = <0>;
 
-				reg_1p0d: regulator-vdd1p0d {
+				reg_1p0d: regulator-vdd1p0d@30360210 {
+					reg = <0x30360210>;
 					compatible = "fsl,anatop-regulator";
 					regulator-name = "vdd1p0d";
 					regulator-min-microvolt = <800000>;
@@ -613,34 +573,6 @@
 					anatop-max-voltage = <1200000>;
 					anatop-enable-bit = <0>;
 				};
-
-				reg_1p2: regulator-vdd1p2 {
-					compatible = "fsl,anatop-regulator";
-					regulator-name = "vdd1p2";
-					regulator-min-microvolt = <1100000>;
-					regulator-max-microvolt = <1300000>;
-					anatop-reg-offset = <0x220>;
-					anatop-vol-bit-shift = <8>;
-					anatop-vol-bit-width = <5>;
-					anatop-min-bit-val = <0x14>;
-					anatop-min-voltage = <1100000>;
-					anatop-max-voltage = <1300000>;
-					anatop-enable-bit = <0>;
-				};
-			};
-
-			irq_sec_vio: caam_secvio {
-				compatible = "fsl,imx6q-caam-secvio";
-				interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
-				jtag-tamper = "disabled";
-				watchdog-tamper = "enabled";
-				internal-boot-tamper = "enabled";
-				external-pin-tamper = "disabled";
-			};
-
-			caam_snvs: caam-snvs@30370000 {
-				compatible = "fsl,imx6q-caam-snvs";
-				reg = <0x30370000 0x10000>;
 			};
 
 			snvs: snvs@30370000 {
@@ -663,18 +595,14 @@
 					offset = <0x38>;
 					value = <0x60>;
 					mask = <0x60>;
-					status = "disabled";
 				};
 
 				snvs_pwrkey: snvs-powerkey {
 					compatible = "fsl,sec-v4.0-pwrkey";
 					regmap = <&snvs>;
 					interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX7D_SNVS_CLK>;
-					clock-names = "snvs";
 					linux,keycode = <KEY_POWER>;
 					wakeup-source;
-					status = "disabled";
 				};
 			};
 
@@ -689,7 +617,7 @@
 			};
 
 			src: src@30390000 {
-				compatible = "fsl,imx7d-src", "fsl,imx51-src", "syscon";
+				compatible = "fsl,imx7d-src", "syscon";
 				reg = <0x30390000 0x10000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 				#reset-cells = <1>;
@@ -702,29 +630,16 @@
 				interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
 				#interrupt-cells = <3>;
 				interrupt-parent = <&intc>;
-				fsl,mf-mix-wakeup-irq = <0x54010000 0xc00 0x0 0x1040640>;
 				#power-domain-cells = <1>;
 
 				pgc {
 					#address-cells = <1>;
 					#size-cells = <0>;
 
-					pgc_mipi_phy: power-domain@0 {
-						#power-domain-cells = <0>;
-						reg = <0>;
-						power-supply = <&reg_1p0d>;
-					};
-
-					pgc_pcie_phy: power-domain@1 {
+					pgc_pcie_phy: pgc-power-domain@1 {
 						#power-domain-cells = <0>;
 						reg = <1>;
 						power-supply = <&reg_1p0d>;
-					};
-
-					pgc_hsic_phy: power-domain@2 {
-						#power-domain-cells = <0>;
-						reg = <2>;
-						power-supply = <&reg_1p2>;
 					};
 				};
 			};
@@ -752,11 +667,10 @@
 				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_ADC_ROOT_CLK>;
 				clock-names = "adc";
-				#io-channel-cells = <1>;
 				status = "disabled";
 			};
 
-			ecspi4: spi@30630000 {
+			ecspi4: ecspi@30630000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
@@ -812,66 +726,14 @@
 				status = "disabled";
 			};
 
-			csi: csi@30710000 {
-				compatible = "fsl,imx7-csi";
-				reg = <0x30710000 0x10000>;
-				interrupts = <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
-					 <&clks IMX7D_CSI_MCLK_ROOT_CLK>,
-					 <&clks IMX7D_CLK_DUMMY>;
-				clock-names = "axi", "mclk", "dcic";
-				status = "disabled";
-
-				port {
-					csi_from_csi_mux: endpoint {
-						remote-endpoint = <&csi_mux_to_csi>;
-					};
-				};
-			};
-
 			lcdif: lcdif@30730000 {
 				compatible = "fsl,imx7d-lcdif", "fsl,imx28-lcdif";
 				reg = <0x30730000 0x10000>;
 				interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_LCDIF_PIXEL_ROOT_CLK>,
-					 <&clks IMX7D_CLK_DUMMY>,
-					 <&clks IMX7D_CLK_DUMMY>;
-				clock-names = "pix", "axi", "disp_axi";
+					<&clks IMX7D_LCDIF_PIXEL_ROOT_CLK>;
+				clock-names = "pix", "axi";
 				status = "disabled";
-			};
-
-			mipi_csi: mipi-csi@30750000 {
-				compatible = "fsl,imx7-mipi-csi2";
-				reg = <0x30750000 0x10000>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_IPG_ROOT_CLK>,
-					 <&clks IMX7D_MIPI_CSI_ROOT_CLK>,
-					 <&clks IMX7D_MIPI_DPHY_ROOT_CLK>;
-				clock-names = "pclk", "wrap", "phy";
-				power-domains = <&pgc_mipi_phy>;
-				phy-supply = <&reg_1p0d>;
-				resets = <&src IMX7_RESET_MIPI_PHY_MRST>;
-				reset-names = "mrst";
-				status = "disabled";
-
-				port@0 {
-					reg = <0>;
-				};
-
-				port@1 {
-					reg = <1>;
-
-					mipi_vc0_to_csi_mux: endpoint {
-						remote-endpoint = <&csi_mux_from_mipi_vc0>;
-					};
-				};
-			};
-
-			ddrc: ddrc@307a0000 {
-				compatible = "fsl,imx7-ddrc";
-				reg = <0x307a0000 0x10000>;
 			};
 		};
 
@@ -889,7 +751,7 @@
 				reg = <0x30800000 0x100000>;
 				ranges;
 
-				ecspi1: spi@30820000 {
+				ecspi1: ecspi@30820000 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
@@ -901,7 +763,7 @@
 					status = "disabled";
 				};
 
-				ecspi2: spi@30830000 {
+				ecspi2: ecspi@30830000 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
@@ -913,7 +775,7 @@
 					status = "disabled";
 				};
 
-				ecspi3: spi@30840000 {
+				ecspi3: ecspi@30840000 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx7d-ecspi", "fsl,imx51-ecspi";
@@ -944,8 +806,6 @@
 					clocks = <&clks IMX7D_UART2_ROOT_CLK>,
 						<&clks IMX7D_UART2_ROOT_CLK>;
 					clock-names = "ipg", "per";
-					dmas = <&sdma 24 4 0>, <&sdma 25 4 0>;
-					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -957,8 +817,6 @@
 					clocks = <&clks IMX7D_UART3_ROOT_CLK>,
 						<&clks IMX7D_UART3_ROOT_CLK>;
 					clock-names = "ipg", "per";
-					dmas = <&sdma 26 4 0>, <&sdma 27 4 0>;
-					dma-names = "rx", "tx";
 					status = "disabled";
 				};
 
@@ -1045,7 +903,6 @@
 				clocks = <&clks IMX7D_CLK_DUMMY>,
 					<&clks IMX7D_CAN1_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				fsl,stop-mode = <&gpr 0x10 1 0x10 17>;
 				status = "disabled";
 			};
 
@@ -1056,7 +913,6 @@
 				clocks = <&clks IMX7D_CLK_DUMMY>,
 					<&clks IMX7D_CAN2_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				fsl,stop-mode = <&gpr 0x10 2 0x10 18>;
 				status = "disabled";
 			};
 
@@ -1108,8 +964,6 @@
 				clocks = <&clks IMX7D_UART4_ROOT_CLK>,
 					<&clks IMX7D_UART4_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				dmas = <&sdma 28 4 0>, <&sdma 29 4 0>;
-				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1121,8 +975,6 @@
 				clocks = <&clks IMX7D_UART5_ROOT_CLK>,
 					<&clks IMX7D_UART5_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				dmas = <&sdma 30 4 0>, <&sdma 31 4 0>;
-				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1134,8 +986,6 @@
 				clocks = <&clks IMX7D_UART6_ROOT_CLK>,
 					<&clks IMX7D_UART6_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				dmas = <&sdma 32 4 0>, <&sdma 33 4 0>;
-				dma-names = "rx", "tx";
 				status = "disabled";
 			};
 
@@ -1147,35 +997,7 @@
 				clocks = <&clks IMX7D_UART7_ROOT_CLK>,
 					<&clks IMX7D_UART7_ROOT_CLK>;
 				clock-names = "ipg", "per";
-				dmas = <&sdma 34 4 0>, <&sdma 35 4 0>;
-				dma-names = "rx", "tx";
 				status = "disabled";
-			};
-
-			mu0a: mailbox@30aa0000 {
-				compatible = "fsl,imx7s-mu", "fsl,imx6sx-mu";
-				reg = <0x30aa0000 0x10000>;
-				interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_MU_ROOT_CLK>;
-				#mbox-cells = <2>;
-				status = "disabled";
-			};
-
-			mu0b: mailbox@30ab0000 {
-				compatible = "fsl,imx7s-mu", "fsl,imx6sx-mu";
-				reg = <0x30ab0000 0x10000>;
-				interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_MU_ROOT_CLK>;
-				#mbox-cells = <2>;
-				fsl,mu-side-b;
-				status = "disabled";
-			};
-
-			usbg1: usbg1 {
-				compatible = "fsl,imx27-usb-gadget";
-				dr_mode = "peripheral";
-				chipidea,usb = <&usbotg1>;
-				status = "okay";
 			};
 
 			usbotg1: usb@30b10000 {
@@ -1193,7 +1015,6 @@
 				compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
 				reg = <0x30b30000 0x200>;
 				interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
-				power-domains = <&pgc_hsic_phy>;
 				clocks = <&clks IMX7D_USB_CTRL_CLK>;
 				fsl,usbphy = <&usbphynop3>;
 				fsl,usbmisc = <&usbmisc3 0>;
@@ -1224,8 +1045,6 @@
 					<&clks IMX7D_USDHC1_ROOT_CLK>;
 				clock-names = "ipg", "ahb", "per";
 				bus-width = <4>;
-				fsl,tuning-step = <2>;
-				fsl,tuning-start-tap = <20>;
 				status = "disabled";
 			};
 
@@ -1238,8 +1057,6 @@
 					<&clks IMX7D_USDHC2_ROOT_CLK>;
 				clock-names = "ipg", "ahb", "per";
 				bus-width = <4>;
-				fsl,tuning-step = <2>;
-				fsl,tuning-start-tap = <20>;
 				status = "disabled";
 			};
 
@@ -1252,8 +1069,6 @@
 					<&clks IMX7D_USDHC3_ROOT_CLK>;
 				clock-names = "ipg", "ahb", "per";
 				bus-width = <4>;
-				fsl,tuning-step = <2>;
-				fsl,tuning-start-tap = <20>;
 				status = "disabled";
 			};
 
@@ -1261,8 +1076,8 @@
 				compatible = "fsl,imx7d-sdma", "fsl,imx35-sdma";
 				reg = <0x30bd0000 0x10000>;
 				interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_IPG_ROOT_CLK>,
-					 <&clks IMX7D_SDMA_CORE_CLK>;
+				clocks = <&clks IMX7D_SDMA_CORE_CLK>,
+					 <&clks IMX7D_AHB_CHANNEL_ROOT_CLK>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
@@ -1276,15 +1091,15 @@
 					<GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_ENET1_IPG_ROOT_CLK>,
+				clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET1_TIME_ROOT_CLK>,
 					<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,
-					<&clks IMX7D_ENET_PHY_REF_ROOT_DIV>;
+					<&clks IMX7D_ENET_PHY_REF_ROOT_CLK>;
 				clock-names = "ipg", "ahb", "ptp",
 					"enet_clk_ref", "enet_out";
-				fsl,num-tx-queues = <3>;
-				fsl,num-rx-queues = <3>;
+				fsl,num-tx-queues=<3>;
+				fsl,num-rx-queues=<3>;
 				status = "disabled";
 			};
 		};

@@ -75,16 +75,17 @@
 
 #define __U_BOOT__
 #ifdef __U_BOOT__
-#include <common.h>         /* readline */
-#include <env.h>
 #include <malloc.h>         /* malloc, free, realloc*/
 #include <linux/ctype.h>    /* isalpha, isdigit */
+#include <common.h>        /* readline */
 #include <console.h>
 #include <bootretry.h>
 #include <cli.h>
 #include <cli_hush.h>
 #include <command.h>        /* find_cmd */
-#include <asm/global_data.h>
+#ifndef CONFIG_SYS_PROMPT_HUSH_PS2
+#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
+#endif
 #endif
 #ifndef __U_BOOT__
 #include <ctype.h>     /* isalpha, isdigit */
@@ -1847,7 +1848,8 @@ static int run_list_real(struct pipe *pi)
 				continue;
 			} else {
 				/* insert new value from list for variable */
-				free(pi->progs->argv[0]);
+				if (pi->progs->argv[0])
+					free(pi->progs->argv[0]);
 				pi->progs->argv[0] = *list++;
 #ifndef __U_BOOT__
 				pi->progs->glob_result.gl_pathv[0] =
@@ -2168,6 +2170,14 @@ int set_local_var(const char *s, int flg_export)
 
 	name=strdup(s);
 
+#ifdef __U_BOOT__
+	if (env_get(name) != NULL) {
+		printf ("ERROR: "
+				"There is a global environment variable with the same name.\n");
+		free(name);
+		return -1;
+	}
+#endif
 	/* Assume when we enter this function that we are already in
 	 * NAME=VALUE format.  So the first order of business is to
 	 * split 's' on the '=' into 'name' and 'value' */
@@ -3654,8 +3664,8 @@ static char *make_string(char **inp, int *nonnull)
 }
 
 #ifdef __U_BOOT__
-static int do_showvar(struct cmd_tbl *cmdtp, int flag, int argc,
-		      char *const argv[])
+static int do_showvar(cmd_tbl_t *cmdtp, int flag, int argc,
+		      char * const argv[])
 {
 	int i, k;
 	int rcode = 0;

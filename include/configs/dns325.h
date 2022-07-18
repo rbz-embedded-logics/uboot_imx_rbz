@@ -24,6 +24,18 @@
 #define CONFIG_KW88F6281		/* SOC Name */
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
 
+/*
+ * Commands configuration
+ */
+#define CONFIG_MTD_DEVICE		/* needed for mtdparts commands */
+#define CONFIG_MTD_PARTITIONS
+
+#define CONFIG_NR_DRAM_BANKS		1
+
+/*
+ * mv-common.h should be defined after CMD configs since it used them
+ * to enable certain macros
+ */
 #include "mv-common.h"
 
 /* Remove or override few declarations from mv-common.h */
@@ -33,6 +45,7 @@
  */
 #ifdef CONFIG_CMD_NET
 #define CONFIG_MVGBE_PORTS		{1, 0} /* enable port 0 only */
+#define CONFIG_NETCONSOLE
 #endif
 
 /*
@@ -44,6 +57,13 @@
 #endif
 
 /*
+ * RTC driver configuration
+ */
+#ifdef CONFIG_CMD_DATE
+#define CONFIG_RTC_MV
+#endif
+
+/*
  * Enable GPI0 support
  */
 #define CONFIG_KIRKWOOD_GPIO
@@ -51,6 +71,13 @@
 /*
  * Environment variables configurations
  */
+#ifdef CONFIG_CMD_NAND
+#define CONFIG_ENV_SECT_SIZE		0x20000	/* 128KB */
+#endif
+
+#define CONFIG_ENV_SIZE			0x20000	/* 128KB */
+#define CONFIG_ENV_ADDR			0xe0000
+#define CONFIG_ENV_OFFSET		0xe0000	/* env starts here */
 
 /*
  * Default environment variables

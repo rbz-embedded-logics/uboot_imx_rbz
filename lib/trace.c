@@ -5,9 +5,7 @@
 
 #include <common.h>
 #include <mapmem.h>
-#include <time.h>
 #include <trace.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/sections.h>
 
@@ -58,49 +56,6 @@ static inline uintptr_t __attribute__((no_instrument_function))
 	return offset / FUNC_SITE_SIZE;
 }
 
-#if defined(CONFIG_EFI_LOADER) && (defined(CONFIG_ARM) || defined(CONFIG_RISCV))
-
-/**
- * trace_gd - the value of the gd register
- */
-static volatile gd_t *trace_gd;
-
-/**
- * trace_save_gd() - save the value of the gd register
- */
-static void __attribute__((no_instrument_function)) trace_save_gd(void)
-{
-	trace_gd = gd;
-}
-
-/**
- * trace_swap_gd() - swap between U-Boot and application gd register value
- *
- * An UEFI application may change the value of the register that gd lives in.
- * But some of our functions like get_ticks() access this register. So we
- * have to set the gd register to the U-Boot value when entering a trace
- * point and set it back to the application value when exiting the trace point.
- */
-static void __attribute__((no_instrument_function)) trace_swap_gd(void)
-{
-	volatile gd_t *temp_gd = trace_gd;
-
-	trace_gd = gd;
-	set_gd(temp_gd);
-}
-
-#else
-
-static void __attribute__((no_instrument_function)) trace_save_gd(void)
-{
-}
-
-static void __attribute__((no_instrument_function)) trace_swap_gd(void)
-{
-}
-
-#endif
-
 static void __attribute__((no_instrument_function)) add_ftrace(void *func_ptr,
 				void *caller, ulong flags)
 {
@@ -131,13 +86,13 @@ static void __attribute__((no_instrument_function)) add_textbase(void)
 }
 
 /**
- * __cyg_profile_func_enter() - record function entry
+ * This is called on every function entry
  *
  * We add to our tally for this function and add to the list of called
  * functions.
  *
- * @func_ptr:	pointer to function being entered
- * @caller:	pointer to function which called this function
+ * @param func_ptr	Pointer to function being entered
+ * @param caller	Pointer to function which called this function
  */
 void __attribute__((no_instrument_function)) __cyg_profile_func_enter(
 		void *func_ptr, void *caller)
@@ -145,7 +100,6 @@ void __attribute__((no_instrument_function)) __cyg_profile_func_enter(
 	if (trace_enabled) {
 		int func;
 
-		trace_swap_gd();
 		add_ftrace(func_ptr, caller, FUNCF_ENTRY);
 		func = func_ptr_to_num(func_ptr);
 		if (func < hdr->func_count) {
@@ -157,45 +111,44 @@ void __attribute__((no_instrument_function)) __cyg_profile_func_enter(
 		hdr->depth++;
 		if (hdr->depth > hdr->depth_limit)
 			hdr->max_depth = hdr->depth;
-		trace_swap_gd();
 	}
 }
 
 /**
- * __cyg_profile_func_exit() - record function exit
+ * This is called on every function exit
  *
- * @func_ptr:	pointer to function being entered
- * @caller:	pointer to function which called this function
+ * We do nothing here.
+ *
+ * @param func_ptr	Pointer to function being entered
+ * @param caller	Pointer to function which called this function
  */
 void __attribute__((no_instrument_function)) __cyg_profile_func_exit(
 		void *func_ptr, void *caller)
 {
 	if (trace_enabled) {
-		trace_swap_gd();
 		add_ftrace(func_ptr, caller, FUNCF_EXIT);
 		hdr->depth--;
-		trace_swap_gd();
 	}
 }
 
 /**
- * trace_list_functions() - produce a list of called functions
+ * Produce a list of called functions
  *
  * The information is written into the supplied buffer - a header followed
  * by a list of function records.
  *
- * @buff:	buffer to place list into
- * @buff_size:	size of buffer
- * @needed:	returns size of buffer needed, which may be
- *		greater than buff_size if we ran out of space.
- * Return:	0 if ok, -ENOSPC if space was exhausted
+ * @param buff		Buffer to place list into
+ * @param buff_size	Size of buffer
+ * @param needed	Returns size of buffer needed, which may be
+ *			greater than buff_size if we ran out of space.
+ * @return 0 if ok, -1 if space was exhausted
  */
-int trace_list_functions(void *buff, size_t buff_size, size_t *needed)
+int trace_list_functions(void *buff, int buff_size, unsigned int *needed)
 {
 	struct trace_output_hdr *output_hdr = NULL;
 	void *end, *ptr = buff;
-	size_t func;
-	size_t upto;
+	int func;
+	int upto;
 
 	end = buff ? buff + buff_size : NULL;
 
@@ -206,7 +159,7 @@ int trace_list_functions(void *buff, size_t buff_size, size_t *needed)
 
 	/* Add information about each function */
 	for (func = upto = 0; func < hdr->func_count; func++) {
-		size_t calls = hdr->call_accum[func];
+		int calls = hdr->call_accum[func];
 
 		if (!calls)
 			continue;
@@ -230,29 +183,16 @@ int trace_list_functions(void *buff, size_t buff_size, size_t *needed)
 	/* Work out how must of the buffer we used */
 	*needed = ptr - buff;
 	if (ptr > end)
-		return -ENOSPC;
-
+		return -1;
 	return 0;
 }
 
-/**
- * trace_list_functions() - produce a list of function calls
- *
- * The information is written into the supplied buffer - a header followed
- * by a list of function records.
- *
- * @buff:	buffer to place list into
- * @buff_size:	size of buffer
- * @needed:	returns size of buffer needed, which may be
- *		greater than buff_size if we ran out of space.
- * Return:	0 if ok, -ENOSPC if space was exhausted
- */
-int trace_list_calls(void *buff, size_t buff_size, size_t *needed)
+int trace_list_calls(void *buff, int buff_size, unsigned *needed)
 {
 	struct trace_output_hdr *output_hdr = NULL;
 	void *end, *ptr = buff;
-	size_t rec, upto;
-	size_t count;
+	int rec, upto;
+	int count;
 
 	end = buff ? buff + buff_size : NULL;
 
@@ -287,14 +227,11 @@ int trace_list_calls(void *buff, size_t buff_size, size_t *needed)
 	/* Work out how must of the buffer we used */
 	*needed = ptr - buff;
 	if (ptr > end)
-		return -ENOSPC;
-
+		return -1;
 	return 0;
 }
 
-/**
- * trace_print_stats() - print basic information about tracing
- */
+/* Print basic information about tracing */
 void trace_print_stats(void)
 {
 	ulong count;
@@ -333,11 +270,10 @@ void __attribute__((no_instrument_function)) trace_set_enabled(int enabled)
 }
 
 /**
- * trace_init() - initialize the tracing system and enable it
+ * Init the tracing system ready for used, and enable it
  *
- * @buff:	Pointer to trace buffer
- * @buff_size:	Size of trace buffer
- * Return:	0 if ok
+ * @param buff		Pointer to trace buffer
+ * @param buff_size	Size of trace buffer
  */
 int __attribute__((no_instrument_function)) trace_init(void *buff,
 		size_t buff_size)
@@ -345,8 +281,6 @@ int __attribute__((no_instrument_function)) trace_init(void *buff,
 	ulong func_count = gd->mon_len / FUNC_SITE_SIZE;
 	size_t needed;
 	int was_disabled = !trace_enabled;
-
-	trace_save_gd();
 
 	if (!was_disabled) {
 #ifdef CONFIG_TRACE_EARLY
@@ -360,8 +294,7 @@ int __attribute__((no_instrument_function)) trace_init(void *buff,
 		trace_enabled = 0;
 		hdr = map_sysmem(CONFIG_TRACE_EARLY_ADDR,
 				 CONFIG_TRACE_EARLY_SIZE);
-		end = (char *)&hdr->ftrace[min(hdr->ftrace_count,
-					       hdr->ftrace_size)];
+		end = (char *)&hdr->ftrace[hdr->ftrace_count];
 		used = end - (char *)hdr;
 		printf("trace: copying %08lx bytes of early data from %x to %08lx\n",
 		       used, CONFIG_TRACE_EARLY_ADDR,
@@ -369,7 +302,7 @@ int __attribute__((no_instrument_function)) trace_init(void *buff,
 		memcpy(buff, hdr, used);
 #else
 		puts("trace: already enabled\n");
-		return -EALREADY;
+		return -1;
 #endif
 	}
 	hdr = (struct trace_hdr *)buff;
@@ -377,7 +310,7 @@ int __attribute__((no_instrument_function)) trace_init(void *buff,
 	if (needed > buff_size) {
 		printf("trace: buffer size %zd bytes: at least %zd needed\n",
 		       buff_size, needed);
-		return -ENOSPC;
+		return -1;
 	}
 
 	if (was_disabled)
@@ -391,19 +324,13 @@ int __attribute__((no_instrument_function)) trace_init(void *buff,
 	add_textbase();
 
 	puts("trace: enabled\n");
-	hdr->depth_limit = CONFIG_TRACE_CALL_DEPTH_LIMIT;
+	hdr->depth_limit = 15;
 	trace_enabled = 1;
 	trace_inited = 1;
-
 	return 0;
 }
 
 #ifdef CONFIG_TRACE_EARLY
-/**
- * trace_early_init() - initialize the tracing system for early tracing
- *
- * Return:	0 if ok, -ENOSPC if not enough memory is available
- */
 int __attribute__((no_instrument_function)) trace_early_init(void)
 {
 	ulong func_count = gd->mon_len / FUNC_SITE_SIZE;
@@ -419,7 +346,7 @@ int __attribute__((no_instrument_function)) trace_early_init(void)
 	if (needed > buff_size) {
 		printf("trace: buffer size is %zd bytes, at least %zd needed\n",
 		       buff_size, needed);
-		return -ENOSPC;
+		return -1;
 	}
 
 	memset(hdr, '\0', needed);
@@ -430,11 +357,10 @@ int __attribute__((no_instrument_function)) trace_early_init(void)
 	hdr->ftrace = (struct trace_call *)((char *)hdr + needed);
 	hdr->ftrace_size = (buff_size - needed) / sizeof(*hdr->ftrace);
 	add_textbase();
-	hdr->depth_limit = CONFIG_TRACE_EARLY_CALL_DEPTH_LIMIT;
+	hdr->depth_limit = 200;
 	printf("trace: early enable at %08x\n", CONFIG_TRACE_EARLY_ADDR);
 
 	trace_enabled = 1;
-
 	return 0;
 }
 #endif

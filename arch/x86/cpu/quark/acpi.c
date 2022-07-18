@@ -4,8 +4,7 @@
  */
 
 #include <common.h>
-#include <acpi/acpi_table.h>
-#include <asm/processor.h>
+#include <asm/acpi_table.h>
 #include <asm/tables.h>
 #include <asm/arch/global_nvs.h>
 #include <asm/arch/iomap.h>
@@ -68,7 +67,7 @@ void acpi_create_fadt(struct acpi_fadt *fadt, struct acpi_facs *facs,
 	fadt->reset_reg.access_size = ACPI_ACCESS_SIZE_BYTE_ACCESS;
 	fadt->reset_reg.addrl = IO_PORT_RESET;
 	fadt->reset_reg.addrh = 0;
-	fadt->reset_value = SYS_RST | RST_CPU | FULL_RST;
+	fadt->reset_value = SYS_RST | RST_CPU;
 
 	fadt->x_firmware_ctl_l = (u32)facs;
 	fadt->x_firmware_ctl_h = 0;
@@ -134,10 +133,8 @@ void acpi_create_fadt(struct acpi_fadt *fadt, struct acpi_facs *facs,
 	header->checksum = table_compute_checksum(fadt, header->length);
 }
 
-int acpi_create_gnvs(struct acpi_global_nvs *gnvs)
+void acpi_create_gnvs(struct acpi_global_nvs *gnvs)
 {
 	/* quark is a uni-processor */
 	gnvs->pcnt = 1;
-
-	return 0;
 }

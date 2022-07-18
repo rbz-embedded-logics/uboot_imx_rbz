@@ -85,20 +85,22 @@ long simple_strtol(const char *cp, char **endp, unsigned int base)
 unsigned long ustrtoul(const char *cp, char **endp, unsigned int base)
 {
 	unsigned long result = simple_strtoul(cp, endp, base);
-	switch (tolower(**endp)) {
-	case 'g':
+	switch (**endp) {
+	case 'G':
 		result *= 1024;
 		/* fall through */
-	case 'm':
+	case 'M':
 		result *= 1024;
 		/* fall through */
+	case 'K':
 	case 'k':
 		result *= 1024;
-		(*endp)++;
-		if (**endp == 'i')
-			(*endp)++;
-		if (**endp == 'B')
-			(*endp)++;
+		if ((*endp)[1] == 'i') {
+			if ((*endp)[2] == 'B')
+				(*endp) += 3;
+			else
+				(*endp) += 2;
+		}
 	}
 	return result;
 }
@@ -106,20 +108,22 @@ unsigned long ustrtoul(const char *cp, char **endp, unsigned int base)
 unsigned long long ustrtoull(const char *cp, char **endp, unsigned int base)
 {
 	unsigned long long result = simple_strtoull(cp, endp, base);
-	switch (tolower(**endp)) {
-	case 'g':
+	switch (**endp) {
+	case 'G':
 		result *= 1024;
 		/* fall through */
-	case 'm':
+	case 'M':
 		result *= 1024;
 		/* fall through */
+	case 'K':
 	case 'k':
 		result *= 1024;
-		(*endp)++;
-		if (**endp == 'i')
-			(*endp)++;
-		if (**endp == 'B')
-			(*endp)++;
+		if ((*endp)[1] == 'i') {
+			if ((*endp)[2] == 'B')
+				(*endp) += 3;
+			else
+				(*endp) += 2;
+		}
 	}
 	return result;
 }
@@ -162,12 +166,4 @@ long trailing_strtoln(const char *str, const char *end)
 long trailing_strtol(const char *str)
 {
 	return trailing_strtoln(str, NULL);
-}
-
-void str_to_upper(const char *in, char *out, size_t len)
-{
-	for (; len > 0 && *in; len--)
-		*out++ = toupper(*in++);
-	if (len)
-		*out = '\0';
 }

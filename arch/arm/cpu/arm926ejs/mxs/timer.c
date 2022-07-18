@@ -10,13 +10,9 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <time.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
-#include <linux/delay.h>
 
 /* Maximum fixed count */
 #if defined(CONFIG_MX23)
@@ -114,9 +110,14 @@ unsigned long long get_ticks(void)
 	return timestamp;
 }
 
+ulong get_timer_masked(void)
+{
+	return tick_to_time(get_ticks());
+}
+
 ulong get_timer(ulong base)
 {
-	return tick_to_time(get_ticks()) - base;
+	return get_timer_masked() - base;
 }
 
 /* We use the HW_DIGCTL_MICROSECONDS register for sub-millisecond timer. */

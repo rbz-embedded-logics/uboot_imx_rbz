@@ -39,6 +39,7 @@
 
 &eth0 {
 	/* ethernet@70000 */
+	mac-address = [00 50 43 02 02 01];
 	pinctrl-0 = <&ge0_rgmii_pins>;
 	pinctrl-names = "default";
 	phy = <&phy_dedicated>;
@@ -97,12 +98,4 @@
 	pinctrl-names = "default";
 	status = "okay";
 	u-boot,dm-pre-reloc;
-};
-
-&i2c0 {
-	eeprom@53 {
-		compatible = "atmel,24c02";
-		reg = <0x53>;
-		pagesize = <16>;
-	};
 };

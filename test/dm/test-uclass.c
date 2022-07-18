@@ -7,14 +7,12 @@
  */
 
 #include <common.h>
-#include <log.h>
 #include <malloc.h>
 #include <dm.h>
 #include <errno.h>
 #include <asm/io.h>
 #include <dm/test.h>
 #include <linux/list.h>
-#include <test/test.h>
 #include <test/ut.h>
 
 static struct unit_test_state *uts = &global_dm_test_state;
@@ -36,7 +34,7 @@ static int test_post_bind(struct udevice *dev)
 	dm_testdrv_op_count[DM_TEST_OP_POST_BIND]++;
 	ut_assert(!device_active(dev));
 
-	uc_pdata = dev_get_uclass_plat(dev);
+	uc_pdata = dev_get_uclass_platdata(dev);
 	ut_assert(uc_pdata);
 
 	uc_pdata->intval1 = TEST_UC_PDATA_INTVAL1;
@@ -82,7 +80,7 @@ static int test_post_probe(struct udevice *dev)
 	if (&prev->uclass_node != &uc->dev_head) {
 		struct dm_test_uclass_perdev_priv *prev_uc_priv
 				= dev_get_uclass_priv(prev);
-		struct dm_test_pdata *pdata = dev_get_plat(prev);
+		struct dm_test_pdata *pdata = prev->platdata;
 
 		ut_assert(pdata);
 		ut_assert(prev_uc_priv);
@@ -102,7 +100,7 @@ static int test_pre_remove(struct udevice *dev)
 static int test_init(struct uclass *uc)
 {
 	dm_testdrv_op_count[DM_TEST_OP_INIT]++;
-	ut_assert(uclass_get_priv(uc));
+	ut_assert(uc->priv);
 
 	return 0;
 }
@@ -124,7 +122,8 @@ UCLASS_DRIVER(test) = {
 	.pre_remove	= test_pre_remove,
 	.init		= test_init,
 	.destroy	= test_destroy,
-	.priv_auto	= sizeof(struct dm_test_uclass_priv),
-	.per_device_auto	= sizeof(struct dm_test_uclass_perdev_priv),
-	.per_device_plat_auto	= sizeof(struct dm_test_perdev_uc_pdata),
+	.priv_auto_alloc_size	= sizeof(struct dm_test_uclass_priv),
+	.per_device_auto_alloc_size = sizeof(struct dm_test_uclass_perdev_priv),
+	.per_device_platdata_auto_alloc_size =
+					sizeof(struct dm_test_perdev_uc_pdata),
 };

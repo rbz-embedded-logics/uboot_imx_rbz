@@ -14,15 +14,10 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <log.h>
 #include <malloc.h>
-#include <dm.h>
-#include <dm/device_compat.h>
-#include <dm/devres.h>
+#include <asm/dma-mapping.h>
+#include <usb/lin_gadget_compat.h>
 #include <linux/bug.h>
-#include <linux/delay.h>
-#include <linux/dma-mapping.h>
 #include <linux/list.h>
 
 #include <linux/usb/ch9.h>
@@ -248,8 +243,7 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	list_del(&req->list);
 	req->trb = NULL;
-	if (req->request.length)
-		dwc3_flush_cache((uintptr_t)req->request.dma, req->request.length);
+	dwc3_flush_cache((uintptr_t)req->request.dma, req->request.length);
 
 	if (req->request.status == -EINPROGRESS)
 		req->request.status = status;
@@ -634,7 +628,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		strlcat(dep->name, "-int", sizeof(dep->name));
 		break;
 	default:
-		dev_err(dep->dwc->dev, "invalid endpoint transfer type\n");
+		dev_err(dwc->dev, "invalid endpoint transfer type\n");
 	}
 
 	spin_lock_irqsave(&dwc->lock, flags);
@@ -709,9 +703,10 @@ static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
 {
 	struct dwc3_trb		*trb;
 
-	dev_vdbg(dep->dwc->dev, "%s: req %p dma %08llx length %d%s%s\n",
-		 dep->name, req, (unsigned long long)dma,
-		 length, last ? " last" : "", chain ? " chain" : "");
+	dev_vdbg(dwc->dev, "%s: req %p dma %08llx length %d%s%s\n",
+			dep->name, req, (unsigned long long) dma,
+			length, last ? " last" : "",
+			chain ? " chain" : "");
 
 
 	trb = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
@@ -972,8 +967,8 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 	 * so HACK the request length
 	 */
 	if (dep->direction == 0 &&
-	    req->request.length < usb_endpoint_maxp(dep->endpoint.desc))
-		req->request.length = usb_endpoint_maxp(dep->endpoint.desc);
+	    req->request.length < dep->endpoint.maxpacket)
+		req->request.length = dep->endpoint.maxpacket;
 
 	/*
 	 * We only add to our list of requests now and
@@ -1074,22 +1069,21 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 
 	spin_lock_irqsave(&dwc->lock, flags);
 	if (!dep->endpoint.desc) {
-		dev_dbg(dep->dwc->dev,
-			"trying to queue request %p to disabled %s\n", request,
-			ep->name);
+		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
+				request, ep->name);
 		ret = -ESHUTDOWN;
 		goto out;
 	}
 
 	if (req->dep != dep) {
-		WARN(true, "request %p belongs to '%s'\n", request,
-		     req->dep->name);
+		WARN(true, "request %p belongs to '%s'\n",
+				request, req->dep->name);
 		ret = -EINVAL;
 		goto out;
 	}
 
-	dev_vdbg(dep->dwc->dev, "queing request %p to %s length %d\n",
-		 request, ep->name, request->length);
+	dev_vdbg(dwc->dev, "queing request %p to %s length %d\n",
+			request, ep->name, request->length);
 
 	ret = __dwc3_gadget_ep_queue(dep, req);
 
@@ -1486,7 +1480,7 @@ static int dwc3_gadget_start(struct usb_gadget *g,
 	if (dwc->revision < DWC3_REVISION_220A) {
 		reg |= DWC3_DCFG_SUPERSPEED;
 	} else {
-		switch (dwc->gadget.max_speed) {
+		switch (dwc->maximum_speed) {
 		case USB_SPEED_LOW:
 			reg |= DWC3_DSTS_LOWSPEED;
 			break;
@@ -1610,12 +1604,7 @@ static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc,
 		} else {
 			int		ret;
 
-			if (dwc->maximum_speed >= USB_SPEED_SUPER)
-				usb_ep_set_maxpacket_limit(&dep->endpoint,
-							   1024);
-			else
-				usb_ep_set_maxpacket_limit(&dep->endpoint,
-							   512);
+			usb_ep_set_maxpacket_limit(&dep->endpoint, 512);
 			dep->endpoint.max_streams = 15;
 			dep->endpoint.ops = &dwc3_gadget_ep_ops;
 			list_add_tail(&dep->endpoint.ep_list,
@@ -2568,7 +2557,6 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 int dwc3_gadget_init(struct dwc3 *dwc)
 {
 	int					ret;
-	u32 reg;
 
 	dwc->ctrl_req = dma_alloc_coherent(sizeof(*dwc->ctrl_req),
 					(unsigned long *)&dwc->ctrl_req_addr);
@@ -2602,7 +2590,7 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	}
 
 	dwc->gadget.ops			= &dwc3_gadget_ops;
-	dwc->gadget.max_speed		= dwc->maximum_speed;
+	dwc->gadget.max_speed		= USB_SPEED_SUPER;
 	dwc->gadget.speed		= USB_SPEED_UNKNOWN;
 	dwc->gadget.name		= "dwc3-gadget";
 
@@ -2626,10 +2614,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 		dev_err(dwc->dev, "failed to register udc\n");
 		goto err4;
 	}
-
-	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-	reg &= ~(DWC3_DCTL_INITU1ENA | DWC3_DCTL_INITU2ENA);
-	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	return 0;
 

@@ -6,9 +6,7 @@
 #ifndef _CLOCK_MANAGER_H_
 #define _CLOCK_MANAGER_H_
 
-phys_addr_t socfpga_get_clkmgr_addr(void);
-
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 void cm_wait_for_lock(u32 mask);
 int cm_wait_for_fsm(void);
 void cm_print_clock_quick_summary(void);
@@ -20,8 +18,6 @@ void cm_print_clock_quick_summary(void);
 #include <asm/arch/clock_manager_arria10.h>
 #elif defined(CONFIG_TARGET_SOCFPGA_STRATIX10)
 #include <asm/arch/clock_manager_s10.h>
-#elif defined(CONFIG_TARGET_SOCFPGA_AGILEX)
-#include <asm/arch/clock_manager_agilex.h>
 #endif
 
 #endif /* _CLOCK_MANAGER_H_ */

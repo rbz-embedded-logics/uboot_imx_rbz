@@ -5,9 +5,6 @@
  *
  * Copyright (C) 2011
  * Stefano Babic, DENX Software Engineering, <sbabic@denx.de>
- *
- * Copyright (C) 2015-2016 Freescale Semiconductor, Inc.
- *
  */
 #include <common.h>
 #include <errno.h>
@@ -16,12 +13,6 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
-#include <dt-structs.h>
-#include <mapmem.h>
-#ifdef CONFIG_IMX_RDC
-#include <asm/mach-imx/rdc-sema.h>
-#include <asm/arch/imx-rdc.h>
-#endif
 
 enum mxc_gpio_direction {
 	MXC_GPIO_DIRECTION_IN,
@@ -31,10 +22,6 @@ enum mxc_gpio_direction {
 #define GPIO_PER_BANK			32
 
 struct mxc_gpio_plat {
-#if CONFIG_IS_ENABLED(OF_PLATDATA)
-	/* Put this first since driver model will copy the data here */
-	struct dtd_gpio_mxc dtplat;
-#endif
 	int bank_index;
 	struct gpio_regs *regs;
 };
@@ -43,8 +30,8 @@ struct mxc_bank_info {
 	struct gpio_regs *regs;
 };
 
-#if !CONFIG_IS_ENABLED(DM_GPIO)
-#define GPIO_TO_PORT(n)		((n) / 32)
+#ifndef CONFIG_DM_GPIO
+#define GPIO_TO_PORT(n)		(n / 32)
 
 /* GPIO port description */
 static unsigned long gpio_ports[] = {
@@ -53,50 +40,22 @@ static unsigned long gpio_ports[] = {
 	[2] = GPIO3_BASE_ADDR,
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
 		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_MX7) || defined(CONFIG_IMX8M) || \
-		defined(CONFIG_ARCH_IMX8) || defined(CONFIG_IMXRT1050)
+		defined(CONFIG_MX7) || defined(CONFIG_MX8M)
 	[3] = GPIO4_BASE_ADDR,
 #endif
 #if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_MX7) || defined(CONFIG_IMX8M) || \
-		defined(CONFIG_ARCH_IMX8) || defined(CONFIG_IMXRT1050)
+		defined(CONFIG_MX7) || defined(CONFIG_MX8M)
 	[4] = GPIO5_BASE_ADDR,
-#if !(defined(CONFIG_MX6UL) || defined(CONFIG_MX6ULL) || \
-		defined(CONFIG_IMX8M) || defined(CONFIG_IMXRT1050))
+#if !(defined(CONFIG_MX6UL) || defined(CONFIG_MX6ULL) || defined(CONFIG_MX8M))
 	[5] = GPIO6_BASE_ADDR,
 #endif
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_MX7) || \
-		defined(CONFIG_ARCH_IMX8)
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_MX7)
 #if !(defined(CONFIG_MX6UL) || defined(CONFIG_MX6ULL))
 	[6] = GPIO7_BASE_ADDR,
 #endif
 #endif
-#if defined(CONFIG_ARCH_IMX8)
-	[7] = GPIO8_BASE_ADDR,
-#endif
 };
-
-#ifdef CONFIG_IMX_RDC
-static unsigned int gpio_rdc[] = {
-	RDC_PER_GPIO1,
-	RDC_PER_GPIO2,
-	RDC_PER_GPIO3,
-	RDC_PER_GPIO4,
-	RDC_PER_GPIO5,
-	RDC_PER_GPIO6,
-	RDC_PER_GPIO7,
-};
-
-#define RDC_CHECK(x) imx_rdc_check_permission(gpio_rdc[x], 0)
-#define RDC_SPINLOCK_UP(x) imx_rdc_sema_lock(gpio_rdc[x])
-#define RDC_SPINLOCK_DOWN(x) imx_rdc_sema_unlock(gpio_rdc[x])
-#else
-#define RDC_CHECK(x) 0
-#define RDC_SPINLOCK_UP(x)
-#define RDC_SPINLOCK_DOWN(x)
-#endif
-
 
 static int mxc_gpio_direction(unsigned int gpio,
 	enum mxc_gpio_direction direction)
@@ -107,11 +66,6 @@ static int mxc_gpio_direction(unsigned int gpio,
 
 	if (port >= ARRAY_SIZE(gpio_ports))
 		return -1;
-
-	if (RDC_CHECK(port))
-		return -1;
-
-	RDC_SPINLOCK_UP(port);
 
 	gpio &= 0x1f;
 
@@ -128,8 +82,6 @@ static int mxc_gpio_direction(unsigned int gpio,
 	}
 	writel(l, &regs->gpio_dir);
 
-	RDC_SPINLOCK_DOWN(port);
-
 	return 0;
 }
 
@@ -142,11 +94,6 @@ int gpio_set_value(unsigned gpio, int value)
 	if (port >= ARRAY_SIZE(gpio_ports))
 		return -1;
 
-	if (RDC_CHECK(port))
-		return -1;
-
-	RDC_SPINLOCK_UP(port);
-
 	gpio &= 0x1f;
 
 	regs = (struct gpio_regs *)gpio_ports[port];
@@ -157,8 +104,6 @@ int gpio_set_value(unsigned gpio, int value)
 	else
 		l &= ~(1 << gpio);
 	writel(l, &regs->gpio_dr);
-
-	RDC_SPINLOCK_DOWN(port);
 
 	return 0;
 }
@@ -172,18 +117,11 @@ int gpio_get_value(unsigned gpio)
 	if (port >= ARRAY_SIZE(gpio_ports))
 		return -1;
 
-	if (RDC_CHECK(port))
-		return -1;
-
-	RDC_SPINLOCK_UP(port);
-
 	gpio &= 0x1f;
 
 	regs = (struct gpio_regs *)gpio_ports[port];
 
-	val = (readl(&regs->gpio_dr) >> gpio) & 0x01;
-
-	RDC_SPINLOCK_DOWN(port);
+	val = (readl(&regs->gpio_psr) >> gpio) & 0x01;
 
 	return val;
 }
@@ -193,10 +131,6 @@ int gpio_request(unsigned gpio, const char *label)
 	unsigned int port = GPIO_TO_PORT(gpio);
 	if (port >= ARRAY_SIZE(gpio_ports))
 		return -1;
-
-	if (RDC_CHECK(port))
-		return -1;
-
 	return 0;
 }
 
@@ -221,7 +155,7 @@ int gpio_direction_output(unsigned gpio, int value)
 }
 #endif
 
-#if CONFIG_IS_ENABLED(DM_GPIO)
+#ifdef CONFIG_DM_GPIO
 #include <fdtdec.h>
 static int mxc_gpio_is_output(struct gpio_regs *regs, int offset)
 {
@@ -264,7 +198,7 @@ static void mxc_gpio_bank_set_value(struct gpio_regs *regs, int offset,
 
 static int mxc_gpio_bank_get_value(struct gpio_regs *regs, int offset)
 {
-	return (readl(&regs->gpio_dr) >> offset) & 0x01;
+	return (readl(&regs->gpio_psr) >> offset) & 0x01;
 }
 
 /* set GPIO pin 'gpio' as an input */
@@ -334,22 +268,13 @@ static const struct dm_gpio_ops gpio_mxc_ops = {
 static int mxc_gpio_probe(struct udevice *dev)
 {
 	struct mxc_bank_info *bank = dev_get_priv(dev);
-	struct mxc_gpio_plat *plat = dev_get_plat(dev);
+	struct mxc_gpio_plat *plat = dev_get_platdata(dev);
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 	int banknum;
 	char name[18], *str;
 
-#if CONFIG_IS_ENABLED(OF_PLATDATA)
-	struct dtd_gpio_mxc *dtplat = &plat->dtplat;
-
-	plat->regs = map_sysmem(dtplat->reg[0], dtplat->reg[1]);
-#endif
-
 	banknum = plat->bank_index;
-	if (IS_ENABLED(CONFIG_ARCH_IMX8))
-		sprintf(name, "GPIO%d_", banknum);
-	else
-		sprintf(name, "GPIO%d_", banknum + 1);
+	sprintf(name, "GPIO%d_", banknum + 1);
 	str = strdup(name);
 	if (!str)
 		return -ENOMEM;
@@ -360,24 +285,43 @@ static int mxc_gpio_probe(struct udevice *dev)
 	return 0;
 }
 
-static int mxc_gpio_of_to_plat(struct udevice *dev)
-{
-	struct mxc_gpio_plat *plat = dev_get_plat(dev);
-	if (!CONFIG_IS_ENABLED(OF_PLATDATA)) {
-		fdt_addr_t addr;
-		addr = dev_read_addr(dev);
-		if (addr == FDT_ADDR_T_NONE)
-			return -EINVAL;
-
-		plat->regs = (struct gpio_regs *)addr;
-	}
-	plat->bank_index = dev_seq(dev);
-
-	return 0;
-}
-
 static int mxc_gpio_bind(struct udevice *dev)
 {
+	struct mxc_gpio_plat *plat = dev->platdata;
+	fdt_addr_t addr;
+
+	/*
+	 * If platdata already exsits, directly return.
+	 * Actually only when DT is not supported, platdata
+	 * is statically initialized in U_BOOT_DEVICES.Here
+	 * will return.
+	 */
+	if (plat)
+		return 0;
+
+	addr = devfdt_get_addr(dev);
+	if (addr == FDT_ADDR_T_NONE)
+		return -EINVAL;
+
+	/*
+	 * TODO:
+	 * When every board is converted to driver model and DT is supported,
+	 * this can be done by auto-alloc feature, but not using calloc
+	 * to alloc memory for platdata.
+	 *
+	 * For example mxc_plat below uses platform data rather than device
+	 * tree.
+	 *
+	 * NOTE: DO NOT COPY this code if you are using device tree.
+	 */
+	plat = calloc(1, sizeof(*plat));
+	if (!plat)
+		return -ENOMEM;
+
+	plat->regs = (struct gpio_regs *)addr;
+	plat->bank_index = dev->req_seq;
+	dev->platdata = plat;
+
 	return 0;
 }
 
@@ -391,14 +335,10 @@ U_BOOT_DRIVER(gpio_mxc) = {
 	.id	= UCLASS_GPIO,
 	.ops	= &gpio_mxc_ops,
 	.probe	= mxc_gpio_probe,
-	.of_to_plat = mxc_gpio_of_to_plat,
-	.plat_auto	= sizeof(struct mxc_gpio_plat),
-	.priv_auto	= sizeof(struct mxc_bank_info),
+	.priv_auto_alloc_size = sizeof(struct mxc_bank_info),
 	.of_match = mxc_gpio_ids,
 	.bind	= mxc_gpio_bind,
 };
-
-DM_DRIVER_ALIAS(gpio_mxc, fsl_imx6q_gpio)
 
 #if !CONFIG_IS_ENABLED(OF_CONTROL)
 static const struct mxc_gpio_plat mxc_plat[] = {
@@ -407,45 +347,39 @@ static const struct mxc_gpio_plat mxc_plat[] = {
 	{ 2, (struct gpio_regs *)GPIO3_BASE_ADDR },
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
 		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_IMX8M) || defined(CONFIG_ARCH_IMX8)
+		defined(CONFIG_MX8M)
 	{ 3, (struct gpio_regs *)GPIO4_BASE_ADDR },
 #endif
 #if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_IMX8M) || defined(CONFIG_ARCH_IMX8)
+		defined(CONFIG_MX8M)
 	{ 4, (struct gpio_regs *)GPIO5_BASE_ADDR },
-#ifndef CONFIG_IMX8M
+#ifndef CONFIG_MX8M
 	{ 5, (struct gpio_regs *)GPIO6_BASE_ADDR },
 #endif
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_ARCH_IMX8)
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6)
 	{ 6, (struct gpio_regs *)GPIO7_BASE_ADDR },
-#endif
-#if defined(CONFIG_ARCH_IMX8)
-	{ 7, (struct gpio_regs *)GPIO8_BASE_ADDR },
 #endif
 };
 
-U_BOOT_DRVINFOS(mxc_gpios) = {
+U_BOOT_DEVICES(mxc_gpios) = {
 	{ "gpio_mxc", &mxc_plat[0] },
 	{ "gpio_mxc", &mxc_plat[1] },
 	{ "gpio_mxc", &mxc_plat[2] },
 #if defined(CONFIG_MX25) || defined(CONFIG_MX27) || defined(CONFIG_MX51) || \
 		defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_IMX8M) || defined(CONFIG_ARCH_IMX8)
+		defined(CONFIG_MX8M)
 	{ "gpio_mxc", &mxc_plat[3] },
 #endif
 #if defined(CONFIG_MX27) || defined(CONFIG_MX53) || defined(CONFIG_MX6) || \
-		defined(CONFIG_IMX8M) || defined(CONFIG_ARCH_IMX8)
+		defined(CONFIG_MX8M)
 	{ "gpio_mxc", &mxc_plat[4] },
-#ifndef CONFIG_IMX8M
+#ifndef CONFIG_MX8M
 	{ "gpio_mxc", &mxc_plat[5] },
 #endif
 #endif
-#if defined(CONFIG_MX53) || defined(CONFIG_MX6) || defined(CONFIG_ARCH_IMX8)
+#if defined(CONFIG_MX53) || defined(CONFIG_MX6)
 	{ "gpio_mxc", &mxc_plat[6] },
-#endif
-#if defined(CONFIG_ARCH_IMX8)
-	{ "gpio_mxc", &mxc_plat[7] },
 #endif
 };
 #endif

@@ -51,16 +51,15 @@
 
 /* Includes */
 #include <common.h>
-#include <log.h>
 #include <malloc.h>
 #include <net.h>
 #include <netdev.h>
 #include <asm/io.h>
 #include <pci.h>
-#include <linux/delay.h>
 
 /* defines */
 #define DSIZE     0x00000FFF
+#define ETH_ALEN		6
 #define CRC_SIZE  4
 #define TOUT_LOOP   500000
 #define TX_BUF_SIZE    1536
@@ -252,7 +251,7 @@ static unsigned char rxb[NUM_RX_DESC * RX_BUF_SIZE]
 static int mdio_read(struct eth_device *dev, int phy_id, int addr);
 static void mdio_write(struct eth_device *dev, int phy_id, int addr, int value);
 static void mdio_sync(struct eth_device *dev, u32 offset);
-static int ns8382x_init(struct eth_device *dev, struct bd_info * bis);
+static int ns8382x_init(struct eth_device *dev, bd_t * bis);
 static void ns8382x_reset(struct eth_device *dev);
 static void ns8382x_init_rxfilter(struct eth_device *dev);
 static void ns8382x_init_txd(struct eth_device *dev);
@@ -304,7 +303,7 @@ OUTL(struct eth_device *dev, int command, u_long addr)
  */
 
 int
-ns8382x_initialize(struct bd_info * bis)
+ns8382x_initialize(bd_t * bis)
 {
 	pci_dev_t devno;
 	int card_number = 0;
@@ -530,7 +529,7 @@ mdio_write(struct eth_device *dev, int phy_id, int addr, int value)
  */
 
 static int
-ns8382x_init(struct eth_device *dev, struct bd_info * bis)
+ns8382x_init(struct eth_device *dev, bd_t * bis)
 {
 	u32 config;
 

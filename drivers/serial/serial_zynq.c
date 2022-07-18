@@ -10,14 +10,12 @@
 #include <dm.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <log.h>
 #include <watchdog.h>
 #include <asm/io.h>
-#include <dm/device_compat.h>
-#include <linux/bitops.h>
 #include <linux/compiler.h>
 #include <serial.h>
-#include <linux/err.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #define ZYNQ_UART_SR_TXACTIVE	BIT(11) /* TX active */
 #define ZYNQ_UART_SR_TXFULL	BIT(4) /* TX FIFO full */
@@ -41,11 +39,11 @@ struct uart_zynq {
 	u32 baud_rate_divider; /* 0x34 - Baud Rate Divider [7:0] */
 };
 
-struct zynq_uart_plat {
+struct zynq_uart_priv {
 	struct uart_zynq *regs;
 };
 
-/* Set up the baud rate */
+/* Set up the baud rate in gd struct */
 static void _uart_zynq_serial_setbrg(struct uart_zynq *regs,
 				     unsigned long clock, unsigned long baud)
 {
@@ -107,7 +105,7 @@ static int _uart_zynq_serial_putc(struct uart_zynq *regs, const char c)
 
 static int zynq_serial_setbrg(struct udevice *dev, int baudrate)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
 	unsigned long clock;
 
 	int ret;
@@ -127,36 +125,33 @@ static int zynq_serial_setbrg(struct udevice *dev, int baudrate)
 	debug("%s: CLK %ld\n", __func__, clock);
 
 	ret = clk_enable(&clk);
-	if (ret) {
+	if (ret && ret != -ENOSYS) {
 		dev_err(dev, "failed to enable clock\n");
 		return ret;
 	}
 
-	_uart_zynq_serial_setbrg(plat->regs, clock, baudrate);
+	_uart_zynq_serial_setbrg(priv->regs, clock, baudrate);
 
 	return 0;
 }
 
 static int zynq_serial_probe(struct udevice *dev)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
-	struct uart_zynq *regs = plat->regs;
-	u32 val;
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
 
-	/* No need to reinitialize the UART if TX already enabled */
-	val = readl(&regs->control);
-	if (val & ZYNQ_UART_CR_TX_EN)
+	/* No need to reinitialize the UART after relocation */
+	if (gd->flags & GD_FLG_RELOC)
 		return 0;
 
-	_uart_zynq_serial_init(plat->regs);
+	_uart_zynq_serial_init(priv->regs);
 
 	return 0;
 }
 
 static int zynq_serial_getc(struct udevice *dev)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
-	struct uart_zynq *regs = plat->regs;
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
+	struct uart_zynq *regs = priv->regs;
 
 	if (readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY)
 		return -EAGAIN;
@@ -166,15 +161,15 @@ static int zynq_serial_getc(struct udevice *dev)
 
 static int zynq_serial_putc(struct udevice *dev, const char ch)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
 
-	return _uart_zynq_serial_putc(plat->regs, ch);
+	return _uart_zynq_serial_putc(priv->regs, ch);
 }
 
 static int zynq_serial_pending(struct udevice *dev, bool input)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
-	struct uart_zynq *regs = plat->regs;
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
+	struct uart_zynq *regs = priv->regs;
 
 	if (input)
 		return !(readl(&regs->channel_sts) & ZYNQ_UART_SR_RXEMPTY);
@@ -182,13 +177,13 @@ static int zynq_serial_pending(struct udevice *dev, bool input)
 		return !!(readl(&regs->channel_sts) & ZYNQ_UART_SR_TXACTIVE);
 }
 
-static int zynq_serial_of_to_plat(struct udevice *dev)
+static int zynq_serial_ofdata_to_platdata(struct udevice *dev)
 {
-	struct zynq_uart_plat *plat = dev_get_plat(dev);
+	struct zynq_uart_priv *priv = dev_get_priv(dev);
 
-	plat->regs = (struct uart_zynq *)dev_read_addr(dev);
-	if (IS_ERR(plat->regs))
-		return PTR_ERR(plat->regs);
+	priv->regs = (struct uart_zynq *)dev_read_addr(dev);
+	if (IS_ERR(priv->regs))
+		return PTR_ERR(priv->regs);
 
 	return 0;
 }
@@ -211,10 +206,11 @@ U_BOOT_DRIVER(serial_zynq) = {
 	.name	= "serial_zynq",
 	.id	= UCLASS_SERIAL,
 	.of_match = zynq_serial_ids,
-	.of_to_plat = zynq_serial_of_to_plat,
-	.plat_auto	= sizeof(struct zynq_uart_plat),
+	.ofdata_to_platdata = zynq_serial_ofdata_to_platdata,
+	.priv_auto_alloc_size = sizeof(struct zynq_uart_priv),
 	.probe = zynq_serial_probe,
 	.ops	= &zynq_serial_ops,
+	.flags = DM_FLAG_PRE_RELOC,
 };
 
 #ifdef CONFIG_DEBUG_UART_ZYNQ

@@ -6,9 +6,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <init.h>
-#include <net.h>
-#include <asm/global_data.h>
 #include <asm/mipsregs.h>
 #include <asm/io.h>
 #include <netdev.h>
@@ -79,7 +76,7 @@ int misc_init_r(void)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	return ne2k_register();
 }

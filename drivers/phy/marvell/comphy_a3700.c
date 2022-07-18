@@ -5,12 +5,9 @@
 
 #include <common.h>
 #include <fdtdec.h>
-#include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/soc.h>
-#include <linux/delay.h>
 
 #include "comphy_a3700.h"
 
@@ -274,23 +271,16 @@ static void reg_set_indirect(u32 reg, u16 data, u16 mask)
  *
  * return: 1 if PLL locked (OK), 0 otherwise (FAIL)
  */
-static int comphy_sata_power_up(u32 invert)
+static int comphy_sata_power_up(void)
 {
 	int ret;
-	u32 data = 0;
 
 	debug_enter();
 
 	/*
-	 * 0. Check the Polarity invert bits
+	 * 0. Swap SATA TX lines
 	 */
-	if (invert & PHY_POLARITY_TXD_INVERT)
-		data |= bs_txd_inv;
-
-	if (invert & PHY_POLARITY_RXD_INVERT)
-		data |= bs_rxd_inv;
-
-	reg_set_indirect(vphy_sync_pattern_reg, data, bs_txd_inv | bs_rxd_inv);
+	reg_set_indirect(vphy_sync_pattern_reg, bs_txd_inv, bs_txd_inv);
 
 	/*
 	 * 1. Select 40-bit data width width
@@ -933,6 +923,22 @@ void comphy_dedicated_phys_init(void)
 	}
 
 	node = fdt_node_offset_by_compatible(blob, -1,
+					     "marvell,armada-3700-ahci");
+	if (node > 0) {
+		if (fdtdec_get_is_enabled(blob, node)) {
+			ret = comphy_sata_power_up();
+			if (!ret)
+				printf("Failed to initialize SATA PHY\n");
+			else
+				debug("SATA PHY init succeed\n");
+		} else {
+			debug("SATA node is disabled\n");
+		}
+	}  else {
+		debug("No SATA node in DT\n");
+	}
+
+	node = fdt_node_offset_by_compatible(blob, -1,
 					     "marvell,armada-8k-sdhci");
 	if (node <= 0) {
 		node = fdt_node_offset_by_compatible(
@@ -997,10 +1003,6 @@ int comphy_a3700_init(struct chip_serdes_phy_config *chip_cfg,
 		case PHY_TYPE_SGMII1:
 			ret = comphy_sgmii_power_up(lane, comphy_map->speed,
 						    comphy_map->invert);
-			break;
-
-		case PHY_TYPE_SATA0:
-			ret = comphy_sata_power_up(comphy_map->invert);
 			break;
 
 		default:

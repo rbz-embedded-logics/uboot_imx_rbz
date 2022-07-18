@@ -1,3 +1,2 @@
-efi_miniapp_*.h
+efi_miniapp_file_image.h
 *.efi
-*.so

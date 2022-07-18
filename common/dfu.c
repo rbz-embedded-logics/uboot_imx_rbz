@@ -11,8 +11,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <log.h>
 #include <watchdog.h>
 #include <dfu.h>
 #include <console.h>
@@ -25,9 +23,9 @@ int run_usb_dnl_gadget(int usbctrl_index, char *usb_dnl_gadget)
 	bool dfu_reset = false;
 	int ret, i = 0;
 
-	ret = usb_gadget_initialize(usbctrl_index);
+	ret = board_usb_init(usbctrl_index, USB_INIT_DEVICE);
 	if (ret) {
-		pr_err("usb_gadget_initialize failed\n");
+		pr_err("board usb init failed\n");
 		return CMD_RET_FAILURE;
 	}
 	g_dnl_clear_detach();
@@ -36,10 +34,6 @@ int run_usb_dnl_gadget(int usbctrl_index, char *usb_dnl_gadget)
 		pr_err("g_dnl_register failed");
 		return CMD_RET_FAILURE;
 	}
-
-#ifdef CONFIG_DFU_TIMEOUT
-	unsigned long start_time = get_timer(0);
-#endif
 
 	while (1) {
 		if (g_dnl_detach()) {
@@ -85,28 +79,12 @@ int run_usb_dnl_gadget(int usbctrl_index, char *usb_dnl_gadget)
 			}
 		}
 
-#ifdef CONFIG_DFU_TIMEOUT
-		unsigned long wait_time = dfu_get_timeout();
-
-		if (wait_time) {
-			unsigned long current_time = get_timer(start_time);
-
-			if (current_time > wait_time) {
-				debug("Inactivity timeout, abort DFU\n");
-				goto exit;
-			}
-		}
-#endif
-
-		if (dfu_reinit_needed)
-			goto exit;
-
 		WATCHDOG_RESET();
 		usb_gadget_handle_interrupts(usbctrl_index);
 	}
 exit:
 	g_dnl_unregister();
-	usb_gadget_release(usbctrl_index);
+	board_usb_cleanup(usbctrl_index, USB_INIT_DEVICE);
 
 	if (dfu_reset)
 		do_reset(NULL, 0, 0, NULL);

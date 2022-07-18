@@ -23,6 +23,8 @@
 #define V_OSCK			26000000	/* Clock output from T2 */
 #define V_SCLK			(V_OSCK >> 1)
 
+#define CONFIG_MISC_INIT_R
+
 #define CONFIG_CMDLINE_TAG		1	/* enable passing of ATAGs */
 #define CONFIG_SETUP_MEMORY_TAGS	1
 #define CONFIG_INITRD_TAG		1
@@ -31,6 +33,7 @@
 /*
  * Size of malloc() pool
  */
+#define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB sector */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (128 << 10))
 						/* initial data */
 /*
@@ -55,7 +58,10 @@
  * select serial console configuration
  */
 #define CONFIG_SYS_NS16550_COM3		OMAP34XX_UART3
+#define CONFIG_SERIAL3			3	/* UART3 on CRANEBOARD */
 
+/* allow to overwrite serial and ethaddr */
+#define CONFIG_ENV_OVERWRITE
 #define CONFIG_SYS_BAUDRATE_TABLE	{4800, 9600, 19200, 38400, 57600,\
 					115200}
 
@@ -66,6 +72,15 @@
  */
 
 #ifdef CONFIG_USB_AM35X
+
+#ifdef CONFIG_USB_MUSB_HCD
+
+#ifdef CONFIG_USB_KEYBOARD
+#define CONFIG_PREBOOT "usb start"
+#endif /* CONFIG_USB_KEYBOARD */
+
+#endif /* CONFIG_USB_MUSB_HCD */
+
 #ifdef CONFIG_USB_MUSB_UDC
 /* USB device configuration */
 #define CONFIG_USB_DEVICE		1
@@ -84,6 +99,8 @@
 /*
  * Board NAND Info.
  */
+#define CONFIG_SYS_NAND_ADDR		NAND_BASE	/* physical address */
+							/* to access nand */
 #define CONFIG_SYS_NAND_BASE		NAND_BASE	/* physical address */
 							/* to access */
 							/* nand at CS0 */
@@ -143,6 +160,9 @@
 #define CONFIG_SYS_MAXARGS		32	/* max number of command */
 						/* args */
 /* memtest works on */
+#define CONFIG_SYS_MEMTEST_START	(OMAP34XX_SDRC_CS0)
+#define CONFIG_SYS_MEMTEST_END		(OMAP34XX_SDRC_CS0 + \
+					0x01F00000) /* 31MB */
 
 #define CONFIG_SYS_LOAD_ADDR		(OMAP34XX_SDRC_CS0) /* default load */
 								/* address */
@@ -158,6 +178,7 @@
 /*-----------------------------------------------------------------------
  * Physical Memory Map
  */
+#define CONFIG_NR_DRAM_BANKS	2	/* CS1 may or may not be populated */
 #define PHYS_SDRAM_1		OMAP34XX_SDRC_CS0
 #define PHYS_SDRAM_2		OMAP34XX_SDRC_CS1
 
@@ -177,6 +198,8 @@
 #define CONFIG_SYS_MONITOR_BASE		CONFIG_SYS_FLASH_BASE
 
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB sector */
+#define CONFIG_ENV_OFFSET		0x260000
+#define CONFIG_ENV_ADDR			0x260000
 
 /*-----------------------------------------------------------------------
  * CFI FLASH driver setup
@@ -201,13 +224,19 @@
 					 GENERATED_GBL_DATA_SIZE)
 
 /* Defines for SPL */
+#define CONFIG_SPL_TEXT_BASE		0x40200800
 #define CONFIG_SPL_MAX_SIZE		(SRAM_SCRATCH_SPACE_ADDR - \
 					 CONFIG_SPL_TEXT_BASE)
 
 #define CONFIG_SPL_BSS_START_ADDR	0x80000000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000		/* 512 KB */
 
+#define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION	1
 #define CONFIG_SPL_FS_LOAD_PAYLOAD_NAME	"u-boot.img"
+
+#define CONFIG_SPL_NAND_BASE
+#define CONFIG_SPL_NAND_DRIVERS
+#define CONFIG_SPL_NAND_ECC
 
 /* NAND boot config */
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE

@@ -9,8 +9,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <image.h>
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <asm/global_data.h>
@@ -21,6 +19,7 @@
 
 #define MAX_LEVEL	32		/* how deeply nested we will go */
 #define SCRATCHPAD	1024		/* bytes of scratchpad memory */
+#define CMD_FDT_MAX_DUMP 64
 
 /*
  * Global data (for the gd->bd)
@@ -74,44 +73,10 @@ static int fdt_value_env_set(const void *nodep, int len, const char *var)
 	return 0;
 }
 
-static const char * const fdt_member_table[] = {
-	"magic",
-	"totalsize",
-	"off_dt_struct",
-	"off_dt_strings",
-	"off_mem_rsvmap",
-	"version",
-	"last_comp_version",
-	"boot_cpuid_phys",
-	"size_dt_strings",
-	"size_dt_struct",
-};
-
-static int fdt_get_header_value(int argc, char *const argv[])
-{
-	fdt32_t *fdtp = (fdt32_t *)working_fdt;
-	ulong val;
-	int i;
-
-	if (argv[2][0] != 'g')
-		return CMD_RET_FAILURE;
-
-	for (i = 0; i < ARRAY_SIZE(fdt_member_table); i++) {
-		if (strcmp(fdt_member_table[i], argv[4]))
-			continue;
-
-		val = fdt32_to_cpu(fdtp[i]);
-		env_set_hex(argv[3], val);
-		return CMD_RET_SUCCESS;
-	}
-
-	return CMD_RET_FAILURE;
-}
-
 /*
  * Flattened Device Tree command, see the help for parameter definitions.
  */
-static int do_fdt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+static int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc < 2)
 		return CMD_RET_USAGE;
@@ -237,7 +202,7 @@ static int do_fdt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 				fdt_strerror(err));
 			return 1;
 		}
-		set_working_fdt_addr((ulong)newaddr);
+		working_fdt = newaddr;
 #ifdef CONFIG_OF_SYSTEM_SETUP
 	/* Call the board-specific fixup routine */
 	} else if (strncmp(argv[1], "sys", 3) == 0) {
@@ -286,7 +251,7 @@ static int do_fdt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	/*
 	 * Set the value of a property in the working_fdt.
 	 */
-	} else if (strncmp(argv[1], "se", 2) == 0) {
+	} else if (argv[1][0] == 's') {
 		char *pathp;		/* path */
 		char *prop;		/* property */
 		int  nodeoffset;	/* node offset from libfdt */
@@ -526,9 +491,6 @@ static int do_fdt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	 * Display header info
 	 */
 	} else if (argv[1][0] == 'h') {
-		if (argc == 5)
-			return fdt_get_header_value(argc, argv);
-
 		u32 version = fdt_version(working_fdt);
 		printf("magic:\t\t\t0x%x\n", fdt_magic(working_fdt));
 		printf("totalsize:\t\t0x%x (%d)\n", fdt_totalsize(working_fdt),
@@ -634,9 +596,6 @@ static int do_fdt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 			       fdt_strerror(err));
 			return CMD_RET_FAILURE;
 		}
-#ifdef CONFIG_SOC_KEYSTONE
-		ft_board_setup_ex(working_fdt, gd->bd);
-#endif
 	}
 #endif
 	/* Create a chosen node */
@@ -933,16 +892,10 @@ static int is_printable_string(const void *data, int len)
 static void print_data(const void *data, int len)
 {
 	int j;
-	const char *env_max_dump;
-	ulong max_dump = ULONG_MAX;
 
 	/* no data, don't print */
 	if (len == 0)
 		return;
-
-	env_max_dump = env_get("fdt_max_dump");
-	if (env_max_dump)
-		max_dump = simple_strtoul(env_max_dump, NULL, 16);
 
 	/*
 	 * It is a string, but it may have multiple strings (embedded '\0's).
@@ -962,7 +915,7 @@ static void print_data(const void *data, int len)
 	}
 
 	if ((len %4) == 0) {
-		if (len > max_dump)
+		if (len > CMD_FDT_MAX_DUMP)
 			printf("* 0x%p [0x%08x]", data, len);
 		else {
 			const __be32 *p;
@@ -974,7 +927,7 @@ static void print_data(const void *data, int len)
 			printf(">");
 		}
 	} else { /* anything else... hexdump */
-		if (len > max_dump)
+		if (len > CMD_FDT_MAX_DUMP)
 			printf("* 0x%p [0x%08x]", data, len);
 		else {
 			const u8 *s;
@@ -1134,8 +1087,7 @@ static char fdt_help_text[] =
 	"fdt set    <path> <prop> [<val>]    - Set <property> [to <val>]\n"
 	"fdt mknode <path> <node>            - Create a new node after <path>\n"
 	"fdt rm     <path> [<prop>]          - Delete the node or <property>\n"
-	"fdt header [get <var> <member>]     - Display header info\n"
-	"                                      get - get header member <member> and store it in <var>\n"
+	"fdt header                          - Display header info\n"
 	"fdt bootcpu <id>                    - Set boot cpuid\n"
 	"fdt memory <addr> <size>            - Add/Update memory node\n"
 	"fdt rsvmem print                    - Show current mem reserves\n"

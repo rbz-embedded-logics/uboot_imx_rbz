@@ -74,8 +74,7 @@ Add SNMP
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <log.h>
+#include <environment.h>
 #include <net.h>
 #include <malloc.h>
 #include <linux/compiler.h>
@@ -694,6 +693,16 @@ static int ne2k_setup_driver(struct eth_device *dev)
 		}
 	}
 
+#ifdef CONFIG_DRIVER_NE2000_CCR
+	{
+		vu_char *p = (vu_char *) CONFIG_DRIVER_NE2000_CCR;
+
+		PRINTK("CCR before is %x\n", *p);
+		*p = CONFIG_DRIVER_NE2000_VAL;
+		PRINTK("CCR after is %x\n", *p);
+	}
+#endif
+
 	nic.base = (u8 *) CONFIG_DRIVER_NE2000_BASE;
 
 	nic.data = nic.base + DP_DATA;
@@ -720,7 +729,7 @@ static int ne2k_setup_driver(struct eth_device *dev)
 	return 0;
 }
 
-static int ne2k_init(struct eth_device *dev, struct bd_info *bd)
+static int ne2k_init(struct eth_device *dev, bd_t *bd)
 {
 	dp83902a_start(dev->enetaddr);
 	initialized = 1;

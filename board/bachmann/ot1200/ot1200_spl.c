@@ -4,7 +4,6 @@
  */
 
 #include <common.h>
-#include <init.h>
 #include <spl.h>
 #include <asm/arch/mx6-ddr.h>
 

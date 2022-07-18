@@ -9,9 +9,6 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <init.h>
-#include <net.h>
 #include <netdev.h>
 #include <asm/cache.h>
 #include <asm/io.h>
@@ -290,7 +287,7 @@ int arch_misc_init(void)
 #endif /* CONFIG_ARCH_MISC_INIT */
 
 #ifdef CONFIG_MVGBE
-int cpu_eth_init(struct bd_info *bis)
+int cpu_eth_init(bd_t *bis)
 {
 	mvgbe_initialize(bis);
 	return 0;

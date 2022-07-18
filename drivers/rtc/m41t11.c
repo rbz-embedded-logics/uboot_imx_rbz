@@ -13,7 +13,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <log.h>
 #include <rtc.h>
 #include <i2c.h>
 
@@ -29,6 +28,8 @@
 #define CONFIG_SYS_M41T11_BASE_YEAR 2000
 #endif
 */
+
+#if defined(CONFIG_SYS_I2C_RTC_ADDR) && defined(CONFIG_CMD_DATE)
 
 /* ------------------------------------------------------------------------- */
 /*
@@ -110,9 +111,9 @@ int rtc_get (struct rtc_time *tmp)
 	tmp->tm_yday = 0;
 	tmp->tm_isdst= 0;
 
-	debug("Get DATE: %4d-%02d-%02d (wday=%d)  TIME: %2d:%02d:%02d\n",
-	      tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
-	      tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+	debug ( "Get DATE: %4d-%02d-%02d (wday=%d)  TIME: %2d:%02d:%02d\n",
+		tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
+		tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 
 	return rel;
 }
@@ -121,9 +122,9 @@ int rtc_set (struct rtc_time *tmp)
 {
 	uchar data[RTC_REG_CNT];
 
-	debug("Set DATE: %4d-%02d-%02d (wday=%d)  TIME: %2d:%02d:%02d\n",
-	      tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
-	      tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+	debug ( "Set DATE: %4d-%02d-%02d (wday=%d)  TIME: %2d:%02d:%02d\n",
+		tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
+		tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 
 	data[RTC_SEC_ADDR]    = bin2bcd(tmp->tm_sec) &  0x7F;/*just in case*/
 	data[RTC_MIN_ADDR]    = bin2bcd(tmp->tm_min);
@@ -166,3 +167,4 @@ void rtc_reset (void)
 	val = val & 0x3F;/*turn off freq test keep calibration*/
 	i2c_write(CONFIG_SYS_I2C_RTC_ADDR, RTC_CONTROL_ADDR, 1, &val, 1);
 }
+#endif

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2012 The Chromium OS Authors.
 
-from collections import OrderedDict
 import re
 
 class Expr:
@@ -121,7 +120,7 @@ class Boards:
         Args:
             fname: Filename of boards.cfg file
         """
-        with open(fname, 'r', encoding='utf-8') as fd:
+        with open(fname, 'r') as fd:
             for line in fd:
                 if line[0] == '#':
                     continue
@@ -156,7 +155,7 @@ class Boards:
                 key is board.target
                 value is board
         """
-        board_dict = OrderedDict()
+        board_dict = {}
         for board in self._boards:
             board_dict[board.target] = board
         return board_dict
@@ -167,7 +166,7 @@ class Boards:
         Returns:
             List of Board objects that are marked selected
         """
-        board_dict = OrderedDict()
+        board_dict = {}
         for board in self._boards:
             if board.build_it:
                 board_dict[board.target] = board
@@ -238,30 +237,20 @@ class Boards:
             terms.append(term)
         return terms
 
-    def SelectBoards(self, args, exclude=[], boards=None):
+    def SelectBoards(self, args, exclude=[]):
         """Mark boards selected based on args
-
-        Normally either boards (an explicit list of boards) or args (a list of
-        terms to match against) is used. It is possible to specify both, in
-        which case they are additive.
-
-        If boards and args are both empty, all boards are selected.
 
         Args:
             args: List of strings specifying boards to include, either named,
                   or by their target, architecture, cpu, vendor or soc. If
                   empty, all boards are selected.
             exclude: List of boards to exclude, regardless of 'args'
-            boards: List of boards to build
 
         Returns:
-            Tuple
-                Dictionary which holds the list of boards which were selected
-                    due to each argument, arranged by argument.
-                List of errors found
+            Dictionary which holds the list of boards which were selected
+            due to each argument, arranged by argument.
         """
-        result = OrderedDict()
-        warnings = []
+        result = {}
         terms = self._BuildTerms(args)
 
         result['all'] = []
@@ -272,7 +261,6 @@ class Boards:
         for expr in exclude:
             exclude_list.append(Expr(expr))
 
-        found = []
         for board in self._boards:
             matching_term = None
             build_it = False
@@ -283,10 +271,6 @@ class Boards:
                         matching_term = str(term)
                         build_it = True
                         break
-            elif boards:
-                if board.target in boards:
-                    build_it = True
-                    found.append(board.target)
             else:
                 build_it = True
 
@@ -302,9 +286,4 @@ class Boards:
                     result[matching_term].append(board.target)
                 result['all'].append(board.target)
 
-        if boards:
-            remaining = set(boards) - set(found)
-            if remaining:
-                warnings.append('Boards not found: %s\n' % ', '.join(remaining))
-
-        return result, warnings
+        return result

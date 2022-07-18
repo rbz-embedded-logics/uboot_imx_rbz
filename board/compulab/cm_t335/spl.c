@@ -10,10 +10,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <errno.h>
-#include <init.h>
-#include <log.h>
 
 #include <asm/arch/ddr_defs.h>
 #include <asm/arch/clock.h>

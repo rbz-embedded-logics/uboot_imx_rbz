@@ -4,8 +4,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <init.h>
+#include <asm/scu.h>
 #include <asm/u-boot-x86.h>
 
 /*
@@ -24,4 +23,9 @@ int checkcpu(void)
 int print_cpuinfo(void)
 {
 	return default_print_cpuinfo();
+}
+
+void reset_cpu(ulong addr)
+{
+	scu_ipc_simple_command(IPCMSG_COLD_RESET, 0);
 }

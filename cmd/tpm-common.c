@@ -6,14 +6,10 @@
 #include <common.h>
 #include <command.h>
 #include <dm.h>
-#include <env.h>
-#include <malloc.h>
 #include <asm/unaligned.h>
 #include <linux/string.h>
 #include <tpm-common.h>
 #include "tpm-user-utils.h"
-
-static struct udevice *tpm_dev;
 
 /**
  * Print a byte string in hexdecimal format, 16-bytes per line.
@@ -234,87 +230,20 @@ int type_string_write_vars(const char *type_str, u8 *data,
 	return 0;
 }
 
-static int tpm_show_device(void)
-{
-	struct udevice *dev;
-	char buf[80];
-	int n = 0, rc;
-
-	for_each_tpm_device(dev) {
-		rc = tpm_get_desc(dev, buf, sizeof(buf));
-		if (rc < 0)
-			printf("device %d: can't get info\n", n);
-		else
-			printf("device %d: %s\n", n, buf);
-
-		n++;
-	};
-
-	return 0;
-}
-
-static int tpm_set_device(unsigned long num)
-{
-	struct udevice *dev;
-	unsigned long n = 0;
-	int rc = CMD_RET_FAILURE;
-
-	for_each_tpm_device(dev) {
-		if (n == num) {
-			rc = 0;
-			break;
-		}
-
-		n++;
-	}
-
-	if (!rc)
-		tpm_dev = dev;
-
-	return rc;
-}
-
 int get_tpm(struct udevice **devp)
 {
 	int rc;
 
-	/*
-	 * To keep a backward compatibility with previous code,
-	 * if a tpm device is not explicitly set, we set the first one.
-	 */
-	if (!tpm_dev) {
-		rc = tpm_set_device(0);
-		if (rc) {
-			printf("Couldn't set TPM 0 (rc = %d)\n", rc);
-			return CMD_RET_FAILURE;
-		}
+	rc = uclass_first_device_err(UCLASS_TPM, devp);
+	if (rc) {
+		printf("Could not find TPM (ret=%d)\n", rc);
+		return CMD_RET_FAILURE;
 	}
-
-	if (devp)
-		*devp = tpm_dev;
 
 	return 0;
 }
 
-int do_tpm_device(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
-{
-	unsigned long num;
-	int rc;
-
-	if (argc == 2) {
-		num = simple_strtoul(argv[1], NULL, 10);
-
-		rc = tpm_set_device(num);
-		if (rc)
-			printf("Couldn't set TPM %lu (rc = %d)\n", num, rc);
-	} else {
-		rc = tpm_show_device();
-	}
-
-	return rc;
-}
-
-int do_tpm_info(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_tpm_info(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	struct udevice *dev;
 	char buf[80];
@@ -333,51 +262,23 @@ int do_tpm_info(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	return 0;
 }
 
-int do_tpm_init(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_tpm_init(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct udevice *dev;
-	int rc;
-
 	if (argc != 1)
 		return CMD_RET_USAGE;
-	rc = get_tpm(&dev);
-	if (rc)
-		return rc;
 
-	return report_return_code(tpm_init(dev));
+	return report_return_code(tpm_init());
 }
 
-int do_tpm(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_tpm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct cmd_tbl *tpm_commands, *cmd;
-	struct tpm_chip_priv *priv;
-	struct udevice *dev;
+	cmd_tbl_t *tpm_commands, *cmd;
 	unsigned int size;
-	int ret;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
-	ret = get_tpm(&dev);
-	if (ret)
-		return ret;
-
-	priv = dev_get_uclass_priv(dev);
-
-	/* Below getters return NULL if the desired stack is not built */
-	switch (priv->version) {
-	case TPM_V1:
-		tpm_commands = get_tpm1_commands(&size);
-		break;
-	case TPM_V2:
-		tpm_commands = get_tpm2_commands(&size);
-		break;
-	default:
-		tpm_commands = NULL;
-	}
-
-	if (!tpm_commands)
-		return CMD_RET_USAGE;
+	tpm_commands = get_tpm_commands(&size);
 
 	cmd = find_cmd_tbl(argv[1], tpm_commands, size);
 	if (!cmd)

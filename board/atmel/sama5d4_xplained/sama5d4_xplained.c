@@ -5,8 +5,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/at91_common.h>
 #include <asm/arch/at91_rstc.h>
@@ -18,8 +16,6 @@
 #include <debug_uart.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-extern void at91_pda_detect(void);
 
 #ifdef CONFIG_NAND_ATMEL
 static void sama5d4_xplained_nand_hw_init(void)
@@ -75,7 +71,6 @@ static void sama5d4_xplained_usb_hw_init(void)
 #ifdef CONFIG_BOARD_LATE_INIT
 int board_late_init(void)
 {
-	at91_pda_detect();
 #ifdef CONFIG_DM_VIDEO
 	at91_video_show_board_info();
 #endif

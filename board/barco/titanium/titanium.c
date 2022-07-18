@@ -4,9 +4,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <net.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -19,11 +16,10 @@
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <mmc.h>
-#include <fsl_esdhc_imx.h>
+#include <fsl_esdhc.h>
 #include <micrel.h>
 #include <miiphy.h>
 #include <netdev.h>
-#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -219,7 +215,7 @@ int board_ehci_hcd_init(int port)
 
 #endif
 
-#ifdef CONFIG_FSL_ESDHC_IMX
+#ifdef CONFIG_FSL_ESDHC
 struct fsl_esdhc_cfg usdhc_cfg[1] = {
 	{ USDHC3_BASE_ADDR },
 };
@@ -236,7 +232,7 @@ int board_mmc_getcd(struct mmc *mmc)
 	return 0;
 }
 
-int board_mmc_init(struct bd_info *bis)
+int board_mmc_init(bd_t *bis)
 {
 	/*
 	 * Only one USDHC controller on titianium
@@ -265,7 +261,7 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	setup_iomux_enet();
 

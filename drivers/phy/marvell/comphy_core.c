@@ -8,14 +8,10 @@
 #include <common.h>
 #include <dm.h>
 #include <fdtdec.h>
-#include <asm/global_data.h>
-#include <asm/io.h>
-#include <dm/device_compat.h>
-#include <linux/err.h>
 #include <linux/errno.h>
-#include <linux/libfdt.h>
+#include <asm/io.h>
 
-#include "comphy_core.h"
+#include "comphy.h"
 
 #define COMPHY_MAX_CHIP 4
 
@@ -70,11 +66,6 @@ void comphy_print(struct chip_serdes_phy_config *chip_cfg,
 	}
 }
 
-__weak int comphy_update_map(struct comphy_map *serdes_map, int count)
-{
-	return 0;
-}
-
 static int comphy_probe(struct udevice *dev)
 {
 	const void *blob = gd->fdt_blob;
@@ -85,7 +76,6 @@ static int comphy_probe(struct udevice *dev)
 	int lane;
 	int last_idx = 0;
 	static int current_idx;
-	int res;
 
 	/* Save base addresses for later use */
 	chip_cfg->comphy_base_addr = (void *)devfdt_get_addr_index(dev, 0);
@@ -99,14 +89,14 @@ static int comphy_probe(struct udevice *dev)
 	chip_cfg->comphy_lanes_count = fdtdec_get_int(blob, node,
 						      "max-lanes", 0);
 	if (chip_cfg->comphy_lanes_count <= 0) {
-		dev_err(dev, "comphy max lanes is wrong\n");
+		dev_err(&dev->dev, "comphy max lanes is wrong\n");
 		return -EINVAL;
 	}
 
 	chip_cfg->comphy_mux_bitcount = fdtdec_get_int(blob, node,
 						       "mux-bitcount", 0);
 	if (chip_cfg->comphy_mux_bitcount <= 0) {
-		dev_err(dev, "comphy mux bit count is wrong\n");
+		dev_err(&dev->dev, "comphy mux bit count is wrong\n");
 		return -EINVAL;
 	}
 
@@ -125,7 +115,7 @@ static int comphy_probe(struct udevice *dev)
 	 * compatible node is found
 	 */
 	if (!chip_cfg->ptr_comphy_chip_init) {
-		dev_err(dev, "comphy: No compatible DT node found\n");
+		dev_err(&dev->dev, "comphy: No compatible DT node found\n");
 		return -ENODEV;
 	}
 
@@ -152,10 +142,6 @@ static int comphy_probe(struct udevice *dev)
 
 		lane++;
 	}
-
-	res = comphy_update_map(comphy_map_data, chip_cfg->comphy_lanes_count);
-	if (res < 0)
-		return res;
 
 	/* Save CP index for MultiCP devices (A8K) */
 	chip_cfg->cp_index = current_idx++;
@@ -190,5 +176,5 @@ U_BOOT_DRIVER(mvebu_comphy) = {
 	.id	= UCLASS_MISC,
 	.of_match = comphy_ids,
 	.probe	= comphy_probe,
-	.priv_auto	= sizeof(struct chip_serdes_phy_config),
+	.priv_auto_alloc_size = sizeof(struct chip_serdes_phy_config),
 };

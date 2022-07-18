@@ -5,10 +5,6 @@
  * Author: Tim Harvey <tharvey@gateworks.com>
  */
 
-#include <common.h>
-#include <command.h>
-#include <log.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <common.h>
 #include <i2c.h>
@@ -74,7 +70,7 @@ static void read_hwmon(const char *name, uint reg, uint size)
 		puts("fRD\n");
 	} else {
 		ui = buf[0] | (buf[1]<<8) | (buf[2]<<16);
-		if (size == 2 && ui > 0x8000)
+		if (reg == GSC_HWMON_TEMP && ui > 0x8000)
 			ui -= 0xffff;
 		if (ui == 0xffffff)
 			puts("invalid\n");
@@ -144,10 +140,6 @@ int gsc_info(int verbose)
 		read_hwmon("VDD_IO4",  GSC_HWMON_VDD_IO4, 3);
 		read_hwmon("VDD_GPS",  GSC_HWMON_VDD_IO3, 3);
 		break;
-	case '9': /* GW590x */
-		read_hwmon("AMONBMON",  GSC_HWMON_VDD_IO3, 3);
-		read_hwmon("BAT_VOLT",  GSC_HWMON_VDD_EXT, 3);
-		read_hwmon("BAT_TEMP",  GSC_HWMON_VDD_IO4, 2);
 	}
 	return 0;
 }
@@ -180,8 +172,8 @@ int gsc_boot_wd_disable(void)
 }
 
 #if defined(CONFIG_CMD_GSC) && !defined(CONFIG_SPL_BUILD)
-static int do_gsc_sleep(struct cmd_tbl *cmdtp, int flag, int argc,
-			char *const argv[])
+static int do_gsc_sleep(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
 {
 	unsigned char reg;
 	unsigned long secs = 0;
@@ -222,8 +214,7 @@ error:
 	return CMD_RET_FAILURE;
 }
 
-static int do_gsc_wd(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_gsc_wd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned char reg;
 
@@ -262,7 +253,7 @@ static int do_gsc_wd(struct cmd_tbl *cmdtp, int flag, int argc,
 	return CMD_RET_SUCCESS;
 }
 
-static int do_gsc(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+static int do_gsc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc < 2)
 		return gsc_info(1);

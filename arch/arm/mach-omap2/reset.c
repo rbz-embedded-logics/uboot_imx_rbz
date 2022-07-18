@@ -9,7 +9,6 @@
  * Sricharan R <r.sricharan@ti.com>
  */
 #include <config.h>
-#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
 #include <linux/compiler.h>

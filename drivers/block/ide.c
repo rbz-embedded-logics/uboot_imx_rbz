@@ -6,14 +6,10 @@
 
 #include <common.h>
 #include <ata.h>
-#include <blk.h>
 #include <dm.h>
 #include <ide.h>
-#include <log.h>
-#include <part.h>
 #include <watchdog.h>
 #include <asm/io.h>
-#include <linux/delay.h>
 
 #ifdef __PPC__
 # define EIEIO		__asm__ volatile ("eieio")
@@ -235,7 +231,7 @@ unsigned char atapi_issue(int device, unsigned char *ccb, int ccblen,
 		 (unsigned char) ((buflen >> 8) & 0xFF));
 	ide_outb(device, ATA_DEV_HD, ATA_LBA | ATA_DEVICE(device));
 
-	ide_outb(device, ATA_COMMAND, ATA_CMD_PACKET);
+	ide_outb(device, ATA_COMMAND, ATAPI_CMD_PACKET);
 	udelay(50);
 
 	mask = ATA_STAT_DRQ | ATA_STAT_BUSY | ATA_STAT_ERR;
@@ -574,7 +570,7 @@ static void ide_ident(struct blk_desc *dev_desc)
 			/*
 			 * Start Ident Command
 			 */
-			ide_outb(device, ATA_COMMAND, ATA_CMD_ID_ATAPI);
+			ide_outb(device, ATA_COMMAND, ATAPI_CMD_IDENT);
 			/*
 			 * Wait for completion - ATAPI devices need more time
 			 * to become ready
@@ -586,7 +582,7 @@ static void ide_ident(struct blk_desc *dev_desc)
 			/*
 			 * Start Ident Command
 			 */
-			ide_outb(device, ATA_COMMAND, ATA_CMD_ID_ATA);
+			ide_outb(device, ATA_COMMAND, ATA_CMD_IDENT);
 
 			/*
 			 * Wait for completion
@@ -940,7 +936,7 @@ ulong ide_read(struct blk_desc *block_dev, lbaint_t blknr, lbaint_t blkcnt,
 #endif
 {
 #ifdef CONFIG_BLK
-	struct blk_desc *block_dev = dev_get_uclass_plat(dev);
+	struct blk_desc *block_dev = dev_get_uclass_platdata(dev);
 #endif
 	int device = block_dev->devnum;
 	ulong n = 0;
@@ -970,7 +966,7 @@ ulong ide_read(struct blk_desc *block_dev, lbaint_t blknr, lbaint_t blkcnt,
 
 	/* first check if the drive is in Powersaving mode, if yes,
 	 * increase the timeout value */
-	ide_outb(device, ATA_COMMAND, ATA_CMD_CHK_POWER);
+	ide_outb(device, ATA_COMMAND, ATA_CMD_CHK_PWR);
 	udelay(50);
 
 	c = ide_wait(device, IDE_TIME_OUT);	/* can't take over 500 ms */
@@ -1067,7 +1063,7 @@ ulong ide_write(struct blk_desc *block_dev, lbaint_t blknr, lbaint_t blkcnt,
 #endif
 {
 #ifdef CONFIG_BLK
-	struct blk_desc *block_dev = dev_get_uclass_plat(dev);
+	struct blk_desc *block_dev = dev_get_uclass_platdata(dev);
 #endif
 	int device = block_dev->devnum;
 	ulong n = 0;
@@ -1160,7 +1156,7 @@ int ide_device_present(int dev)
 #ifdef CONFIG_BLK
 static int ide_blk_probe(struct udevice *udev)
 {
-	struct blk_desc *desc = dev_get_uclass_plat(udev);
+	struct blk_desc *desc = dev_get_uclass_platdata(udev);
 
 	/* fill in device vendor/product/rev strings */
 	strncpy(desc->vendor, ide_dev_desc[desc->devnum].vendor,
@@ -1172,6 +1168,8 @@ static int ide_blk_probe(struct udevice *udev)
 	strncpy(desc->revision, ide_dev_desc[desc->devnum].revision,
 		BLK_REV_SIZE);
 	desc->revision[BLK_REV_SIZE] = '\0';
+
+	part_init(desc);
 
 	return 0;
 }

@@ -238,6 +238,10 @@
 				clocks = <&isi_clk>;
 				clock-names = "isi_clk";
 				status = "disabled";
+				port {
+					#address-cells = <1>;
+					#size-cells = <0>;
+				};
 			};
 
 			sfr: sfr@f0038000 {
@@ -1447,37 +1451,37 @@
 				atmel,nb-banks = <2>;
 			};
 
-			ep10: endpoint@a {
+			ep10: endpoint@10 {
 				reg = <10>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
 			};
 
-			ep11: endpoint@b {
+			ep11: endpoint@11 {
 				reg = <11>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
 			};
 
-			ep12: endpoint@c {
+			ep12: endpoint@12 {
 				reg = <12>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
 			};
 
-			ep13: endpoint@d {
+			ep13: endpoint@13 {
 				reg = <13>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
 			};
 
-			ep14: endpoint@e {
+			ep14: endpoint@14 {
 				reg = <14>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
 			};
 
-			ep15: endpoint@f {
+			ep15: endpoint@15 {
 				reg = <15>;
 				atmel,fifo-size = <1024>;
 				atmel,nb-banks = <2>;
@@ -1533,10 +1537,5 @@
 				clocks = <&hsmc_clk>;
 			};
 		};
-	};
-
-	onewire_tm: onewire {
-		compatible = "w1-gpio";
-		status = "disabled";
 	};
 };

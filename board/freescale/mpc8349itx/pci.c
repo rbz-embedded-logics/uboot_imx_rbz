@@ -4,8 +4,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <linux/delay.h>
 
 #include <asm/mmu.h>
 #include <asm/io.h>

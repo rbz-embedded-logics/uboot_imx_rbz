@@ -14,9 +14,6 @@
 #undef	PACKET_TRACE
 
 #include <common.h>
-#include <dm/devres.h>
-#include <linux/bug.h>
-#include <linux/err.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
@@ -27,6 +24,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/at91_udc.h>
 #include <malloc.h>
+#include <usb/lin_gadget_compat.h>
 
 #include "at91_udc.h"
 

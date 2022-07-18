@@ -6,10 +6,6 @@
 #ifndef __GX_H__
 #define __GX_H__
 
-#ifndef __ASSEMBLY__
-#include <linux/bitops.h>
-#endif
-
 #define GX_FIRMWARE_MEM_SIZE	0x1000000
 
 #define GX_AOBUS_BASE		0xc8100000
@@ -25,7 +21,6 @@
 #define GX_AO_SEC_GP_CFG4	GX_AO_ADDR(0x94)
 #define GX_AO_SEC_GP_CFG5	GX_AO_ADDR(0x95)
 
-#define GX_AO_BOOT_DEVICE	0xF
 #define GX_AO_MEM_SIZE_MASK	0xFFFF0000
 #define GX_AO_MEM_SIZE_SHIFT	16
 #define GX_AO_BL31_RSVMEM_SIZE_MASK	0xFFFF0000

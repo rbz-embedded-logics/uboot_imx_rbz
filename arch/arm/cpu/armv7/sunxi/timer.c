@@ -6,12 +6,8 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <time.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/timer.h>
-#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -59,7 +55,12 @@ int timer_init(void)
 }
 
 /* timer without interrupts */
-static ulong get_timer_masked(void)
+ulong get_timer(ulong base)
+{
+	return get_timer_masked() - base;
+}
+
+ulong get_timer_masked(void)
 {
 	/* current tick value */
 	ulong now = TICKS_TO_HZ(read_timer());
@@ -74,11 +75,6 @@ static ulong get_timer_masked(void)
 	gd->arch.lastinc = now;
 
 	return gd->arch.tbl;
-}
-
-ulong get_timer(ulong base)
-{
-	return get_timer_masked() - base;
 }
 
 /* delay x useconds */

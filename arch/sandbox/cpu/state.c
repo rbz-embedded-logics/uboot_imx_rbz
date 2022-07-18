@@ -6,9 +6,7 @@
 #include <common.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <log.h>
 #include <os.h>
-#include <asm/malloc.h>
 #include <asm/state.h>
 
 /* Main state record for the sandbox */
@@ -18,28 +16,28 @@ static struct sandbox_state *state;	/* Pointer to current state record */
 static int state_ensure_space(int extra_size)
 {
 	void *blob = state->state_fdt;
-	int used, size, free_bytes;
+	int used, size, free;
 	void *buf;
 	int ret;
 
 	used = fdt_off_dt_strings(blob) + fdt_size_dt_strings(blob);
 	size = fdt_totalsize(blob);
-	free_bytes = size - used;
-	if (free_bytes > extra_size)
+	free = size - used;
+	if (free > extra_size)
 		return 0;
 
 	size = used + extra_size;
-	buf = malloc(size);
+	buf = os_malloc(size);
 	if (!buf)
 		return -ENOMEM;
 
 	ret = fdt_open_into(blob, buf, size);
 	if (ret) {
-		free(buf);
+		os_free(buf);
 		return -EIO;
 	}
 
-	free(blob);
+	os_free(blob);
 	state->state_fdt = buf;
 	return 0;
 }
@@ -55,7 +53,7 @@ static int state_read_file(struct sandbox_state *state, const char *fname)
 		printf("Cannot find sandbox state file '%s'\n", fname);
 		return -ENOENT;
 	}
-	state->state_fdt = malloc(size);
+	state->state_fdt = os_malloc(size);
 	if (!state->state_fdt) {
 		puts("No memory to read sandbox state\n");
 		return -ENOMEM;
@@ -77,7 +75,7 @@ static int state_read_file(struct sandbox_state *state, const char *fname)
 err_read:
 	os_close(fd);
 err_open:
-	free(state->state_fdt);
+	os_free(state->state_fdt);
 	state->state_fdt = NULL;
 
 	return ret;
@@ -244,7 +242,7 @@ int sandbox_write_state(struct sandbox_state *state, const char *fname)
 	/* Create a state FDT if we don't have one */
 	if (!state->state_fdt) {
 		size = 0x4000;
-		state->state_fdt = malloc(size);
+		state->state_fdt = os_malloc(size);
 		if (!state->state_fdt) {
 			puts("No memory to create FDT\n");
 			return -ENOMEM;
@@ -302,7 +300,7 @@ int sandbox_write_state(struct sandbox_state *state, const char *fname)
 err_write:
 	os_close(fd);
 err_create:
-	free(state->state_fdt);
+	os_free(state->state_fdt);
 
 	return ret;
 }
@@ -357,20 +355,10 @@ void state_reset_for_test(struct sandbox_state *state)
 {
 	/* No reset yet, so mark it as such. Always allow power reset */
 	state->last_sysreset = SYSRESET_COUNT;
-	state->sysreset_allowed[SYSRESET_POWER_OFF] = true;
-	state->sysreset_allowed[SYSRESET_COLD] = true;
-	state->allow_memio = false;
+	state->sysreset_allowed[SYSRESET_POWER] = true;
 
 	memset(&state->wdt, '\0', sizeof(state->wdt));
 	memset(state->spi, '\0', sizeof(state->spi));
-
-	/*
-	 * Set up the memory tag list. Use the top of emulated SDRAM for the
-	 * first tag number, since that address offset is outside the legal
-	 * range, and can be assumed to be a tag.
-	 */
-	INIT_LIST_HEAD(&state->mapmem_head);
-	state->next_tag = state->ram_size;
 }
 
 int state_init(void)
@@ -379,10 +367,7 @@ int state_init(void)
 
 	state->ram_size = CONFIG_SYS_SDRAM_SIZE;
 	state->ram_buf = os_malloc(state->ram_size);
-	if (!state->ram_buf) {
-		printf("Out of memory\n");
-		os_exit(1);
-	}
+	assert(state->ram_buf);
 
 	state_reset_for_test(state);
 	/*
@@ -400,7 +385,7 @@ int state_uninit(void)
 
 	state = &main_state;
 
-	if (state->write_ram_buf) {
+	if (state->write_ram_buf && !state->ram_buf_rm) {
 		err = os_write_ram_buf(state->ram_buf_fname);
 		if (err) {
 			printf("Failed to write RAM buffer\n");
@@ -420,7 +405,7 @@ int state_uninit(void)
 		os_unlink(state->jumped_fname);
 
 	if (state->state_fdt)
-		free(state->state_fdt);
+		os_free(state->state_fdt);
 	memset(state, '\0', sizeof(*state));
 
 	return 0;

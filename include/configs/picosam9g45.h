@@ -28,9 +28,11 @@
 
 /* general purpose I/O */
 #define CONFIG_ATMEL_LEGACY		/* required until (g)pio is fixed */
+#define CONFIG_AT91_GPIO
 #define CONFIG_AT91_GPIO_PULLUP	1	/* keep pullups on peripheral pins */
 
 /* serial console */
+#define CONFIG_ATMEL_USART
 #define CONFIG_USART_BASE		ATMEL_BASE_DBGU
 #define	CONFIG_USART_ID			ATMEL_ID_SYS
 
@@ -55,7 +57,16 @@
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
 
+/* Enable the watchdog */
+#define CONFIG_AT91SAM9_WATCHDOG
+#define CONFIG_HW_WATCHDOG
+
+/*
+ * Command line configuration.
+ */
+
 /* SDRAM */
+#define CONFIG_NR_DRAM_BANKS	2
 #define PHYS_SDRAM_1		ATMEL_BASE_CS1	/* on DDRSDRC1 */
 #define PHYS_SDRAM_1_SIZE	0x08000000	/* 128 MB */
 #define PHYS_SDRAM_2		ATMEL_BASE_CS6	/* on DDRSDRC0 */
@@ -80,8 +91,12 @@
 
 #define CONFIG_SYS_LOAD_ADDR		0x22000000	/* load address */
 
+#define CONFIG_SYS_MEMTEST_START	CONFIG_SYS_SDRAM_BASE
+#define CONFIG_SYS_MEMTEST_END		0x23e00000
+
 #ifdef CONFIG_SYS_USE_MMC
 /* bootstrap + u-boot + env + linux in mmc */
+#define CONFIG_ENV_SIZE		0x4000
 
 #define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 dtb; " \
 				"fatload mmc 0:1 0x22000000 zImage; " \
@@ -94,6 +109,7 @@
 #define CONFIG_SYS_MALLOC_LEN	ROUND(3 * CONFIG_ENV_SIZE + 128*1024, 0x1000)
 
 /* Defines for SPL */
+#define CONFIG_SPL_TEXT_BASE		0x300000
 #define CONFIG_SPL_MAX_SIZE		0x010000
 #define CONFIG_SPL_STACK		0x310000
 
@@ -106,6 +122,7 @@
 #define CONFIG_SYS_SPL_MALLOC_START	0x20080000
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x00080000
 
+#define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION	1
 #define CONFIG_SPL_FS_LOAD_PAYLOAD_NAME		"u-boot.img"
 
 #define CONFIG_SPL_ATMEL_SIZE

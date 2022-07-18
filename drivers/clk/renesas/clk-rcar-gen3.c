@@ -14,11 +14,8 @@
 #include <clk-uclass.h>
 #include <dm.h>
 #include <errno.h>
-#include <log.h>
 #include <wait_bit.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
 
 #include <dt-bindings/clock/renesas-cpg-mssr.h>
 
@@ -99,7 +96,7 @@ static int gen3_clk_get_parent(struct gen3_clk_priv *priv, struct clk *clk,
 		if (ret)
 			return ret;
 
-		if (core->type == CLK_TYPE_GEN3_MDSEL) {
+		if (core->type == CLK_TYPE_GEN3_PE) {
 			parent->dev = clk->dev;
 			parent->id = core->parent >> (priv->sscg ? 16 : 0);
 			parent->id &= 0xffff;
@@ -110,7 +107,7 @@ static int gen3_clk_get_parent(struct gen3_clk_priv *priv, struct clk *clk,
 	return renesas_clk_get_parent(clk, info, parent);
 }
 
-static int gen3_clk_setup_sdif_div(struct clk *clk, ulong rate)
+static int gen3_clk_setup_sdif_div(struct clk *clk)
 {
 	struct gen3_clk_priv *priv = dev_get_priv(clk->dev);
 	struct cpg_mssr_info *info = priv->info;
@@ -136,7 +133,7 @@ static int gen3_clk_setup_sdif_div(struct clk *clk, ulong rate)
 
 	debug("%s[%i] SDIF offset=%x\n", __func__, __LINE__, core->offset);
 
-	writel((rate == 400000000) ? 0x4 : 0x1, priv->base + core->offset);
+	writel(1, priv->base + core->offset);
 
 	return 0;
 }
@@ -144,6 +141,10 @@ static int gen3_clk_setup_sdif_div(struct clk *clk, ulong rate)
 static int gen3_clk_enable(struct clk *clk)
 {
 	struct gen3_clk_priv *priv = dev_get_priv(clk->dev);
+	int ret = gen3_clk_setup_sdif_div(clk);
+
+	if (ret)
+		return ret;
 
 	return renesas_clk_endisable(clk, priv->base, true);
 }
@@ -260,7 +261,7 @@ static u64 gen3_clk_get_rate64(struct clk *clk)
 		      core->parent, core->mult, core->div, rate);
 		return rate;
 
-	case CLK_TYPE_GEN3_MDSEL:
+	case CLK_TYPE_GEN3_PE:
 		div = (core->div >> (priv->sscg ? 16 : 0)) & 0xffff;
 		rate = gen3_clk_get_rate64(&parent) / div;
 		debug("%s[%i] PE clk: parent=%i div=%u => rate=%llu\n",
@@ -327,7 +328,7 @@ static ulong gen3_clk_get_rate(struct clk *clk)
 static ulong gen3_clk_set_rate(struct clk *clk, ulong rate)
 {
 	/* Force correct SD-IF divider configuration if applicable */
-	gen3_clk_setup_sdif_div(clk, rate);
+	gen3_clk_setup_sdif_div(clk);
 	return gen3_clk_get_rate64(clk);
 }
 
@@ -360,7 +361,7 @@ int gen3_clk_probe(struct udevice *dev)
 	u32 cpg_mode;
 	int ret;
 
-	priv->base = dev_read_addr_ptr(dev);
+	priv->base = (struct gen3_base *)devfdt_get_addr(dev);
 	if (!priv->base)
 		return -EINVAL;
 

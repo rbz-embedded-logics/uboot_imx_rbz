@@ -8,7 +8,6 @@
 #define _PFE_H_
 
 #include <elf.h>
-#include <linux/bitops.h>
 #include "cbus.h"
 
 #define PFE_RESET_WA

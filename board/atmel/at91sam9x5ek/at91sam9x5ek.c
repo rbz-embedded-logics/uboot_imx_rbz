@@ -4,8 +4,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/at91sam9x5_matrix.h>
 #include <asm/arch/at91sam9_smc.h>
@@ -22,9 +20,6 @@ DECLARE_GLOBAL_DATA_PTR;
 /*
  * Miscelaneous platform dependent initialisations
  */
-
-void at91_prepare_cpu_var(void);
-
 #ifdef CONFIG_CMD_NAND
 static void at91sam9x5ek_nand_hw_init(void)
 {
@@ -90,7 +85,6 @@ int board_late_init(void)
 #ifdef CONFIG_DM_VIDEO
 	at91_video_show_board_info();
 #endif
-	at91_prepare_cpu_var();
 	return 0;
 }
 #endif

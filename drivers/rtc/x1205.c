@@ -19,9 +19,10 @@
 
 #include <common.h>
 #include <command.h>
-#include <log.h>
 #include <rtc.h>
 #include <i2c.h>
+
+#if defined(CONFIG_CMD_DATE)
 
 #define CCR_SEC			0
 #define CCR_MIN			1
@@ -159,3 +160,5 @@ void rtc_reset(void)
 	 * Nothing to do
 	 */
 }
+
+#endif

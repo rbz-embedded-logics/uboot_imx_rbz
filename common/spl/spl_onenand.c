@@ -9,8 +9,6 @@
  */
 #include <common.h>
 #include <config.h>
-#include <image.h>
-#include <log.h>
 #include <spl.h>
 #include <asm/io.h>
 #include <onenand_uboot.h>
@@ -23,7 +21,8 @@ static int spl_onenand_load_image(struct spl_image_info *spl_image,
 
 	debug("spl: onenand\n");
 
-	header = spl_get_load_buffer(0, CONFIG_SYS_ONENAND_PAGE_SIZE);
+	/*use CONFIG_SYS_TEXT_BASE as temporary storage area */
+	header = (struct image_header *)(CONFIG_SYS_TEXT_BASE);
 	/* Load u-boot */
 	onenand_spl_load_image(CONFIG_SYS_ONENAND_U_BOOT_OFFS,
 		CONFIG_SYS_ONENAND_PAGE_SIZE, (void *)header);

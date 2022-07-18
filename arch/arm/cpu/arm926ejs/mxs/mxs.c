@@ -10,13 +10,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <cpu_func.h>
-#include <hang.h>
-#include <init.h>
-#include <net.h>
-#include <asm/global_data.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
@@ -54,6 +47,16 @@ void reset_cpu(ulong ignored)
 	/* Endless loop, reset will exit from here */
 	for (;;)
 		;
+}
+
+void enable_caches(void)
+{
+#ifndef CONFIG_SYS_ICACHE_OFF
+	icache_enable();
+#endif
+#ifndef CONFIG_SYS_DCACHE_OFF
+	dcache_enable();
+#endif
 }
 
 /*
@@ -105,16 +108,13 @@ int arch_cpu_init(void)
 	/*
 	 * Enable NAND clock
 	 */
-	/* Set bypass bit */
+	/* Clear bypass bit */
 	writel(CLKCTRL_CLKSEQ_BYPASS_GPMI,
 		&clkctrl_regs->hw_clkctrl_clkseq_set);
 
-	/* Set GPMI clock to ref_xtal / 1 */
-	clrbits_le32(&clkctrl_regs->hw_clkctrl_gpmi, CLKCTRL_GPMI_CLKGATE);
-	while (readl(&clkctrl_regs->hw_clkctrl_gpmi) & CLKCTRL_GPMI_CLKGATE)
-		;
+	/* Set GPMI clock to ref_gpmi / 12 */
 	clrsetbits_le32(&clkctrl_regs->hw_clkctrl_gpmi,
-		CLKCTRL_GPMI_DIV_MASK, 1);
+		CLKCTRL_GPMI_CLKGATE | CLKCTRL_GPMI_DIV_MASK, 1);
 
 	udelay(1000);
 
@@ -190,8 +190,7 @@ int print_cpuinfo(void)
 }
 #endif
 
-int do_mx28_showclocks(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[])
+int do_mx28_showclocks(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	printf("CPU:   %3d MHz\n", mxc_get_clock(MXC_ARM_CLK) / 1000000);
 	printf("BUS:   %3d MHz\n", mxc_get_clock(MXC_AHB_CLK) / 1000000);
@@ -204,7 +203,7 @@ int do_mx28_showclocks(struct cmd_tbl *cmdtp, int flag, int argc,
  * Initializes on-chip ethernet controllers.
  */
 #if defined(CONFIG_MX28) && defined(CONFIG_CMD_NET)
-int cpu_eth_init(struct bd_info *bis)
+int cpu_eth_init(bd_t *bis)
 {
 	struct mxs_clkctrl_regs *clkctrl_regs =
 		(struct mxs_clkctrl_regs *)MXS_CLKCTRL_BASE;

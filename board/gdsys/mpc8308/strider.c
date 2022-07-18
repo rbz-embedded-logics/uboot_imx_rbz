@@ -5,14 +5,9 @@
  */
 
 #include <common.h>
-#include <env.h>
-#include <flash.h>
 #include <hwconfig.h>
 #include <i2c.h>
-#include <init.h>
 #include <spi.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 #include <linux/libfdt.h>
 #include <fdt_support.h>
 #include <pci.h>
@@ -55,7 +50,7 @@ enum {
 	GPIO_MDIO = 1 << 15,
 };
 
-uint mclink_fpgacount;
+unsigned int mclink_fpgacount;
 struct ihs_fpga *fpga_ptr[] = CONFIG_SYS_FPGA_PTR;
 
 struct {
@@ -115,7 +110,7 @@ int checkboard(void)
 
 	printf("Strider %s", hw_type_cat ? "CAT" : "Fiber");
 
-	if (s) {
+	if (s != NULL) {
 		puts(", serial# ");
 		puts(s);
 	}
@@ -128,17 +123,17 @@ int checkboard(void)
 int last_stage_init(void)
 {
 	int slaves;
-	uint k;
-	uint mux_ch;
-	uchar mclink_controllers_dvi[] = { 0x3c, 0x3d, 0x3e };
+	unsigned int k;
+	unsigned int mux_ch;
+	unsigned char mclink_controllers_dvi[] = { 0x3c, 0x3d, 0x3e };
 #ifdef CONFIG_STRIDER_CPU
-	uchar mclink_controllers_dp[] = { 0x24, 0x25, 0x26 };
+	unsigned char mclink_controllers_dp[] = { 0x24, 0x25, 0x26 };
 #endif
 	bool hw_type_cat = pca9698_get_value(0x20, 18);
 #ifdef CONFIG_STRIDER_CON_DP
 	bool is_dh = pca9698_get_value(0x20, 25);
 #endif
-	bool ch0_sgmii2_present;
+	bool ch0_sgmii2_present = false;
 
 	/* Turn on Analog Devices ADV7611 */
 	pca9698_direction_output(0x20, 8, 0);
@@ -151,8 +146,8 @@ int last_stage_init(void)
 
 	/* wait for FPGA done, then reset FPGA */
 	for (k = 0; k < ARRAY_SIZE(mclink_controllers_dvi); ++k) {
-		uint ctr = 0;
-		uchar *mclink_controllers = mclink_controllers_dvi;
+		unsigned int ctr = 0;
+		unsigned char *mclink_controllers = mclink_controllers_dvi;
 
 #ifdef CONFIG_STRIDER_CPU
 		if (i2c_probe(mclink_controllers[k])) {
@@ -166,7 +161,7 @@ int last_stage_init(void)
 #endif
 		while (!(pca953x_get_val(mclink_controllers[k])
 		       & MCFPGA_DONE)) {
-			mdelay(100);
+			udelay(100000);
 			if (ctr++ > 5) {
 				printf("no done for mclink_controller %d\n", k);
 				break;
@@ -183,7 +178,6 @@ int last_stage_init(void)
 	if (hw_type_cat) {
 		int retval;
 		struct mii_dev *mdiodev = mdio_alloc();
-
 		if (!mdiodev)
 			return -ENOMEM;
 		strncpy(mdiodev->name, bb_miiphy_buses[0].name, MDIO_NAME_LEN);
@@ -202,7 +196,7 @@ int last_stage_init(void)
 	}
 
 	/* give slave-PLLs and Parade DP501 some time to be up and running */
-	mdelay(500);
+	udelay(500000);
 
 	mclink_fpgacount = CONFIG_SYS_MCLINK_MAX;
 	slaves = mclink_probe();
@@ -241,7 +235,7 @@ int last_stage_init(void)
 	for (k = 1; k <= slaves; ++k)
 		FPGA_SET_REG(k, extended_control, 0x10); /* enable video */
 
-	mdelay(500);
+	udelay(500000);
 #endif
 
 	for (k = 1; k <= slaves; ++k) {
@@ -266,7 +260,6 @@ int last_stage_init(void)
 		if (hw_type_cat) {
 			int retval;
 			struct mii_dev *mdiodev = mdio_alloc();
-
 			if (!mdiodev)
 				return -ENOMEM;
 			strncpy(mdiodev->name, bb_miiphy_buses[k].name,
@@ -293,17 +286,17 @@ int last_stage_init(void)
  * provide access to fpga gpios (for I2C bitbang)
  * (these may look all too simple but make iocon.h much more readable)
  */
-void fpga_gpio_set(uint bus, int pin)
+void fpga_gpio_set(unsigned int bus, int pin)
 {
 	FPGA_SET_REG(bus, gpio.set, pin);
 }
 
-void fpga_gpio_clear(uint bus, int pin)
+void fpga_gpio_clear(unsigned int bus, int pin)
 {
 	FPGA_SET_REG(bus, gpio.clear, pin);
 }
 
-int fpga_gpio_get(uint bus, int pin)
+int fpga_gpio_get(unsigned int bus, int pin)
 {
 	u16 val;
 
@@ -313,7 +306,7 @@ int fpga_gpio_get(uint bus, int pin)
 }
 
 #ifdef CONFIG_STRIDER_CON_DP
-void fpga_control_set(uint bus, int pin)
+void fpga_control_set(unsigned int bus, int pin)
 {
 	u16 val;
 
@@ -321,7 +314,7 @@ void fpga_control_set(uint bus, int pin)
 	FPGA_SET_REG(bus, control, val | pin);
 }
 
-void fpga_control_clear(uint bus, int pin)
+void fpga_control_clear(unsigned int bus, int pin)
 {
 	u16 val;
 
@@ -335,7 +328,7 @@ void mpc8308_init(void)
 	pca9698_direction_output(0x20, 26, 1);
 }
 
-void mpc8308_set_fpga_reset(uint state)
+void mpc8308_set_fpga_reset(unsigned state)
 {
 	pca9698_set_value(0x20, 26, state ? 0 : 1);
 }
@@ -347,17 +340,17 @@ void mpc8308_setup_hw(void)
 	/*
 	 * set "startup-finished"-gpios
 	 */
-	setbits_be32(&immr->gpio[0].dir, BIT(31 - 11) | BIT(31 - 12));
-	setbits_gpio0_out(BIT(31 - 12));
+	setbits_be32(&immr->gpio[0].dir, (1 << (31-11)) | (1 << (31-12)));
+	setbits_be32(&immr->gpio[0].dat, 1 << (31-12));
 }
 
-int mpc8308_get_fpga_done(uint fpga)
+int mpc8308_get_fpga_done(unsigned fpga)
 {
 	return pca9698_get_value(0x20, 20);
 }
 
 #ifdef CONFIG_FSL_ESDHC
-int board_mmc_init(struct bd_info *bd)
+int board_mmc_init(bd_t *bd)
 {
 	immap_t *immr = (immap_t *)CONFIG_SYS_IMMR;
 	sysconf83xx_t *sysconf = &immr->sysconf;
@@ -414,7 +407,7 @@ ulong board_flash_get_legacy(ulong base, int banknum, flash_info_t *info)
 }
 
 #if defined(CONFIG_OF_BOARD_SETUP)
-int ft_board_setup(void *blob, struct bd_info *bd)
+int ft_board_setup(void *blob, bd_t *bd)
 {
 	ft_cpu_setup(blob, bd);
 	fsl_fdt_fixup_dr_usb(blob, bd);
@@ -429,7 +422,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
  */
 
 struct fpga_mii {
-	uint fpga;
+	unsigned fpga;
 	int mdio;
 } fpga_mii[] = {
 	{ 0, 1},
@@ -556,4 +549,5 @@ struct bb_miiphy_bus bb_miiphy_buses[] = {
 	},
 };
 
-int bb_miiphy_buses_num = ARRAY_SIZE(bb_miiphy_buses);
+int bb_miiphy_buses_num = sizeof(bb_miiphy_buses) /
+			  sizeof(bb_miiphy_buses[0]);

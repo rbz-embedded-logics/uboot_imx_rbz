@@ -17,19 +17,13 @@
  * controllers.
  */
 
-#include <common.h>
-#include <dm.h>
 #include <efi_driver.h>
-#include <log.h>
-#include <malloc.h>
 
-/**
- * check_node_type() - check node type
+/*
+ * Check node type. We do not support partitions as controller handles.
  *
- * We do not support partitions as controller handles.
- *
- * @handle:	handle to be checked
- * Return:	status code
+ * @handle	handle to be checked
+ * @return	status code
  */
 static efi_status_t check_node_type(efi_handle_t handle)
 {
@@ -50,13 +44,13 @@ static efi_status_t check_node_type(efi_handle_t handle)
 	return ret;
 }
 
-/**
- * efi_uc_supported() - check if the driver supports the controller
+/*
+ * Check if the driver supports the controller.
  *
- * @this:			driver binding protocol
- * @controller_handle:		handle of the controller
- * @remaining_device_path:	path specifying the child controller
- * Return:			status code
+ * @this			driver binding protocol
+ * @controller_handle		handle of the controller
+ * @remaining_device_path	path specifying the child controller
+ * @return			status code
  */
 static efi_status_t EFIAPI efi_uc_supported(
 		struct efi_driver_binding_protocol *this,
@@ -98,13 +92,13 @@ out:
 	return EFI_EXIT(ret);
 }
 
-/**
- * efi_uc_start() - create child controllers and attach driver
+/*
+ * Create child controllers and attach driver.
  *
- * @this:			driver binding protocol
- * @controller_handle:		handle of the controller
- * @remaining_device_path:	path specifying the child controller
- * Return:			status code
+ * @this			driver binding protocol
+ * @controller_handle		handle of the controller
+ * @remaining_device_path	path specifying the child controller
+ * @return			status code
  */
 static efi_status_t EFIAPI efi_uc_start(
 		struct efi_driver_binding_protocol *this,
@@ -116,7 +110,7 @@ static efi_status_t EFIAPI efi_uc_start(
 	struct efi_driver_binding_extended_protocol *bp =
 			(struct efi_driver_binding_extended_protocol *)this;
 
-	EFI_ENTRY("%p, %p, %ls", this, controller_handle,
+	EFI_ENTRY("%p, %pUl, %ls", this, controller_handle,
 		  efi_dp_str(remaining_device_path));
 
 	/* Attach driver to controller */
@@ -152,13 +146,12 @@ out:
 	return EFI_EXIT(ret);
 }
 
-/**
- * disconnect_child() - remove a single child controller from the parent
- *			controller
+/*
+ * Remove a single child controller from the parent controller.
  *
- * @controller_handle:	parent controller
- * @child_handle:	child controller
- * Return:		status code
+ * @controller_handle	parent controller
+ * @child_handle	child controller
+ * @return		status code
  */
 static efi_status_t disconnect_child(efi_handle_t controller_handle,
 				     efi_handle_t child_handle)
@@ -183,14 +176,14 @@ static efi_status_t disconnect_child(efi_handle_t controller_handle,
 	return ret;
 }
 
-/**
- * efi_uc_stop() - Remove child controllers and disconnect the controller
+/*
+ * Remove child controllers and disconnect the controller.
  *
- * @this:			driver binding protocol
- * @controller_handle:		handle of the controller
- * @number_of_children:		number of child controllers to remove
- * @child_handle_buffer:	handles of the child controllers to remove
- * Return:			status code
+ * @this			driver binding protocol
+ * @controller_handle		handle of the controller
+ * @number_of_children		number of child controllers to remove
+ * @child_handle_buffer		handles of the child controllers to remove
+ * @return			status code
  */
 static efi_status_t EFIAPI efi_uc_stop(
 		struct efi_driver_binding_protocol *this,
@@ -201,10 +194,9 @@ static efi_status_t EFIAPI efi_uc_stop(
 	efi_status_t ret;
 	efi_uintn_t count;
 	struct efi_open_protocol_info_entry *entry_buffer;
-	struct efi_driver_binding_extended_protocol *bp =
-			(struct efi_driver_binding_extended_protocol *)this;
+	efi_guid_t *guid_controller = NULL;
 
-	EFI_ENTRY("%p, %p, %zu, %p", this, controller_handle,
+	EFI_ENTRY("%p, %pUl, %zu, %p", this, controller_handle,
 		  number_of_children, child_handle_buffer);
 
 	/* Destroy provided child controllers */
@@ -222,7 +214,7 @@ static efi_status_t EFIAPI efi_uc_stop(
 
 	/* Destroy all children */
 	ret = EFI_CALL(systab.boottime->open_protocol_information(
-					controller_handle, bp->ops->protocol,
+					controller_handle, guid_controller,
 					&entry_buffer, &count));
 	if (ret != EFI_SUCCESS)
 		goto out;
@@ -238,32 +230,27 @@ static efi_status_t EFIAPI efi_uc_stop(
 	}
 	ret = EFI_CALL(systab.boottime->free_pool(entry_buffer));
 	if (ret != EFI_SUCCESS)
-		log_err("Cannot free EFI memory pool\n");
+		printf("%s(%u) %s: ERROR: Cannot free pool\n",
+		       __FILE__, __LINE__, __func__);
 
 	/* Detach driver from controller */
 	ret = EFI_CALL(systab.boottime->close_protocol(
-			controller_handle, bp->ops->protocol,
+			controller_handle, guid_controller,
 			this->driver_binding_handle, controller_handle));
 out:
 	return EFI_EXIT(ret);
 }
 
-/**
- * efi_add_driver() - add driver
- *
- * @drv:		driver to add
- * Return:		status code
- */
 static efi_status_t efi_add_driver(struct driver *drv)
 {
 	efi_status_t ret;
 	const struct efi_driver_ops *ops = drv->ops;
 	struct efi_driver_binding_extended_protocol *bp;
 
-	log_debug("Adding EFI driver '%s'\n", drv->name);
+	debug("EFI: Adding driver '%s'\n", drv->name);
 	if (!ops->protocol) {
-		log_err("EFI protocol GUID missing for driver '%s'\n",
-			drv->name);
+		printf("EFI: ERROR: protocol GUID missing for driver '%s'\n",
+		       drv->name);
 		return EFI_INVALID_PARAMETER;
 	}
 	bp = calloc(1, sizeof(struct efi_driver_binding_extended_protocol));
@@ -293,26 +280,28 @@ out:
 	return ret;
 }
 
-/**
- * efi_driver_init() - initialize the EFI drivers
+/*
+ * Initialize the EFI drivers.
+ * Called by board_init_r().
  *
- * Called by efi_init_obj_list().
- *
- * Return:	0 = success, any other value will stop further execution
+ * @return	0 = success, any other value will stop further execution
  */
 efi_status_t efi_driver_init(void)
 {
 	struct driver *drv;
 	efi_status_t ret = EFI_SUCCESS;
 
-	log_debug("Initializing EFI driver framework\n");
+	/* Save 'gd' pointer */
+	efi_save_gd();
+
+	debug("EFI: Initializing EFI driver framework\n");
 	for (drv = ll_entry_start(struct driver, driver);
 	     drv < ll_entry_end(struct driver, driver); ++drv) {
 		if (drv->id == UCLASS_EFI) {
 			ret = efi_add_driver(drv);
 			if (ret != EFI_SUCCESS) {
-				log_err("Failed to add EFI driver %s\n",
-					drv->name);
+				printf("EFI: ERROR: failed to add driver %s\n",
+				       drv->name);
 				break;
 			}
 		}
@@ -320,27 +309,15 @@ efi_status_t efi_driver_init(void)
 	return ret;
 }
 
-/**
- * efi_uc_init() - initialize the EFI uclass
- *
- * @class:	the EFI uclass
- * Return:	0 = success
- */
 static int efi_uc_init(struct uclass *class)
 {
-	log_debug("Initializing UCLASS_EFI\n");
+	printf("EFI: Initializing UCLASS_EFI\n");
 	return 0;
 }
 
-/**
- * efi_uc_destroy() - destroy the EFI uclass
- *
- * @class:	the EFI uclass
- * Return:	0 = success
- */
 static int efi_uc_destroy(struct uclass *class)
 {
-	log_debug("Destroying UCLASS_EFI\n");
+	printf("Destroying  UCLASS_EFI\n");
 	return 0;
 }
 

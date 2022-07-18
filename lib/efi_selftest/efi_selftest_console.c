@@ -6,11 +6,10 @@
  */
 
 #include <efi_selftest.h>
-#include <net.h>
 #include <vsprintf.h>
 
 struct efi_simple_text_output_protocol *con_out;
-struct efi_simple_text_input_protocol *con_in;
+struct efi_simple_input_interface *con_in;
 
 /*
  * Print a MAC address to an u16 string
@@ -44,27 +43,25 @@ static void mac(void *pointer, u16 **buf)
 }
 
 /*
- * printx() - print hexadecimal number to an u16 string
+ * Print a pointer to an u16 string
  *
- * @p:		value to print
- * @prec:	minimum number of digits to print
- * @buf:	pointer to buffer address,
- *		on return position of terminating zero word
+ * @pointer: pointer
+ * @buf: pointer to buffer address
+ * on return position of terminating zero word
  */
-static void printx(u64 p, int prec, u16 **buf)
+static void pointer(void *pointer, u16 **buf)
 {
 	int i;
 	u16 c;
+	uintptr_t p = (uintptr_t)pointer;
 	u16 *pos = *buf;
 
-	for (i = 2 * sizeof(p) - 1; i >= 0; --i) {
-		c = (p >> (4 * i)) & 0x0f;
-		if (c || pos != *buf || !i || i < prec) {
-			c += '0';
-			if (c > '9')
-				c += 'a' - '9' - 1;
-			*pos++ = c;
-		}
+	for (i = 8 * sizeof(p) - 4; i >= 0; i -= 4) {
+		c = (p >> i) & 0x0f;
+		c += '0';
+		if (c > '9')
+			c += 'a' - '9' - 1;
+		*pos++ = c;
 	}
 	*pos = 0;
 	*buf = pos;
@@ -73,12 +70,11 @@ static void printx(u64 p, int prec, u16 **buf)
 /*
  * Print an unsigned 32bit value as decimal number to an u16 string
  *
- * @value:	value to be printed
- * @prec:	minimum number of digits to display
- * @buf:	pointer to buffer address
- *		on return position of terminating zero word
+ * @value: value to be printed
+ * @buf: pointer to buffer address
+ * on return position of terminating zero word
  */
-static void uint2dec(u32 value, int prec, u16 **buf)
+static void uint2dec(u32 value, u16 **buf)
 {
 	u16 *pos = *buf;
 	int i;
@@ -97,7 +93,7 @@ static void uint2dec(u32 value, int prec, u16 **buf)
 	for (i = 0; i < 10; ++i) {
 		/* Write current digit */
 		c = f >> 60;
-		if (c || pos != *buf || 10 - i <= prec)
+		if (c || pos != *buf)
 			*pos++ = c + '0';
 		/* Eliminate current digit */
 		f &= 0xfffffffffffffff;
@@ -113,12 +109,11 @@ static void uint2dec(u32 value, int prec, u16 **buf)
 /*
  * Print a signed 32bit value as decimal number to an u16 string
  *
- * @value:	value to be printed
- * @prec:	minimum number of digits to display
- * @buf:	pointer to buffer address
+ * @value: value to be printed
+ * @buf: pointer to buffer address
  * on return position of terminating zero word
  */
-static void int2dec(s32 value, int prec, u16 **buf)
+static void int2dec(s32 value, u16 **buf)
 {
 	u32 u;
 	u16 *pos = *buf;
@@ -129,7 +124,7 @@ static void int2dec(s32 value, int prec, u16 **buf)
 	} else {
 		u = value;
 	}
-	uint2dec(u, prec, &pos);
+	uint2dec(u, &pos);
 	*buf = pos;
 }
 
@@ -148,7 +143,6 @@ void efi_st_printc(int color, const char *fmt, ...)
 	u16 *pos = buf;
 	const char *s;
 	u16 *u;
-	int prec;
 
 	va_start(args, fmt);
 
@@ -178,20 +172,12 @@ void efi_st_printc(int color, const char *fmt, ...)
 			break;
 		case '%':
 			++c;
-			/* Parse precision */
-			if (*c == '.') {
-				++c;
-				prec = *c - '0';
-				++c;
-			} else {
-				prec = 0;
-			}
 			switch (*c) {
 			case '\0':
 				--c;
 				break;
 			case 'd':
-				int2dec(va_arg(args, s32), prec, &pos);
+				int2dec(va_arg(args, s32), &pos);
 				break;
 			case 'p':
 				++c;
@@ -214,9 +200,7 @@ void efi_st_printc(int color, const char *fmt, ...)
 					break;
 				default:
 					--c;
-					printx((uintptr_t)va_arg(args, void *),
-					       2 * sizeof(void *), &pos);
-					break;
+					pointer(va_arg(args, void*), &pos);
 				}
 				break;
 			case 's':
@@ -225,11 +209,7 @@ void efi_st_printc(int color, const char *fmt, ...)
 					*pos++ = *s;
 				break;
 			case 'u':
-				uint2dec(va_arg(args, u32), prec, &pos);
-				break;
-			case 'x':
-				printx((u64)va_arg(args, unsigned int),
-				       prec, &pos);
+				uint2dec(va_arg(args, u32), &pos);
 				break;
 			default:
 				break;

@@ -13,10 +13,8 @@
 #include <clk-uclass.h>
 #include <dm.h>
 #include <errno.h>
-#include <log.h>
 #include <wait_bit.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
 
 #include <dt-bindings/clock/renesas-cpg-mssr.h>
 

@@ -122,7 +122,7 @@ endif
 
 ifneq ($(CONFIG_SPL_BUILD),y)
 # Check that only R_ARM_RELATIVE relocations are generated.
-INPUTS-y += checkarmreloc
+ALL-y += checkarmreloc
 # The movt / movw can hardcode 16 bit parts of the addresses in the
 # instruction. Relocation is not supported for that case, so disable
 # such usage by requiring word relocations.
@@ -134,11 +134,11 @@ endif
 ifdef CONFIG_ARM64
 OBJCOPYFLAGS += -j .text -j .secure_text -j .secure_data -j .rodata -j .data \
 		-j .u_boot_list -j .rela.dyn -j .got -j .got.plt \
-		-j .binman_sym_table -j .text_rest
+		-j .binman_sym_table
 else
 OBJCOPYFLAGS += -j .text -j .secure_text -j .secure_data -j .rodata -j .hash \
 		-j .data -j .got -j .got.plt -j .u_boot_list -j .rel.dyn \
-		-j .binman_sym_table -j .text_rest
+		-j .binman_sym_table
 endif
 
 # if a dtb section exists we always have to include it
@@ -151,24 +151,20 @@ ifdef CONFIG_EFI_LOADER
 OBJCOPYFLAGS += -j .efi_runtime -j .efi_runtime_rel
 endif
 
-ifdef CONFIG_IMX_M4_BIND
-OBJCOPYFLAGS += -j .firmware_image
-endif
-
 ifneq ($(CONFIG_IMX_CONFIG),)
 ifdef CONFIG_SPL
 ifndef CONFIG_SPL_BUILD
-INPUTS-y += SPL
+ALL-y += SPL
 endif
 else
 ifeq ($(CONFIG_OF_SEPARATE),y)
-INPUTS-y += u-boot-dtb.imx
+ALL-y += u-boot-dtb.imx
 else
-INPUTS-y += u-boot.imx
+ALL-y += u-boot.imx
 endif
 endif
 ifneq ($(CONFIG_VF610),)
-INPUTS-y += u-boot.vyb
+ALL-y += u-boot.vyb
 endif
 endif
 

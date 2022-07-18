@@ -272,7 +272,6 @@ typedef struct ccsr_gpio {
 	u32	gpier;
 	u32	gpimr;
 	u32	gpicr;
-	u32	gpibe;
 } ccsr_gpio_t;
 #endif
 
@@ -1786,10 +1785,11 @@ typedef struct ccsr_gur {
 #define FSL_CORENET_RCWSR13_EC1_FM1_DTSEC4_MII	0x20000000
 #define FSL_CORENET_RCWSR13_EC2	0x0c000000 /* bits 420..421 */
 #define FSL_CORENET_RCWSR13_EC2_FM1_DTSEC5_RGMII	0x00000000
-#define FSL_CORENET_RCWSR13_EC2_FM1_GPIO	0x04000000
+#define FSL_CORENET_RCWSR13_EC2_FM1_GPIO	0x10000000
+#define FSL_CORENET_RCWSR13_EC2_FM1_DTSEC5_MII	0x20000000
 #define FSL_CORENET_RCWSR13_MAC2_GMII_SEL	0x00000080
 #define FSL_CORENET_RCWSR13_MAC2_GMII_SEL_L2_SWITCH	0x00000000
-#define FSL_CORENET_RCWSR13_MAC2_GMII_SEL_ENET_PORT	0x00000080
+#define FSL_CORENET_RCWSR13_MAC2_GMII_SEL_ENET_PORT	0x80000000
 #define CONFIG_SYS_FSL_SCFG_PIXCLKCR_OFFSET	0x28
 #define PXCKEN_MASK	0x80000000
 #define PXCK_MASK	0x00FF0000
@@ -2205,8 +2205,15 @@ typedef struct ccsr_gur {
 	u32	gpiocr;		/* GPIO control */
 #endif
 	u8	res3[12];
+#if defined(CONFIG_ARCH_MPC8569)
+	u32	plppar1;	/* Platform port pin assignment 1 */
+	u32	plppar2;	/* Platform port pin assignment 2 */
+	u32	plpdir1;	/* Platform port pin direction 1 */
+	u32	plpdir2;	/* Platform port pin direction 2 */
+#else
 	u32	gpoutdr;	/* General-purpose output data */
 	u8	res4[12];
+#endif
 	u32	gpindr;		/* General-purpose input data */
 	u8	res5[12];
 	u32	pmuxcr;		/* Alt. function signal multiplex control */
@@ -2472,7 +2479,7 @@ typedef struct ccsr_gur {
 	u32	svr;		/* System version */
 	u8	res10[8];
 	u32	rstcr;		/* Reset control */
-#if defined(CONFIG_ARCH_MPC8568)
+#if defined(CONFIG_ARCH_MPC8568) || defined(CONFIG_ARCH_MPC8569)
 	u8	res11a[76];
 	par_io_t qe_par_io[7];
 	u8	res11b[1600];
