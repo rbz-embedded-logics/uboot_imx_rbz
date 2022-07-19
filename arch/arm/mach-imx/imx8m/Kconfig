@@ -296,6 +296,33 @@ config TARGET_IMX8MP_RSB3720A1_6G
 	select IMX8MP
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
+
+config TARGET_MOD_IMX8M_NANO
+	bool "RBZ MOD_IMX8M_NANO Board"
+    select BINMAN
+	select IMX8MN
+	select SUPPORT_SPL
+	select IMX8M_LPDDR4
+
+config TARGET_MOD_IMX8M_MINI
+	bool "RBZ MOD_IMX8M_MINI Board"
+	select IMX8MM
+	select SUPPORT_SPL
+	select IMX8M_LPDDR4
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select SPL_CRYPTO_SUPPORT if SPL
+
+config TARGET_MOD_IMX8M_PLUS
+	bool "RBZ MOD_IMX8M_PLUS Board"
+	select IMX8MP
+	select SUPPORT_SPL
+	select IMX8M_LPDDR4
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select SPL_CRYPTO_SUPPORT if SPL
 endchoice
 
 source "board/advantech/imx8mp_rsb3720a1/Kconfig"
@@ -320,5 +347,8 @@ source "board/technexion/pico-imx8mq/Kconfig"
 source "board/variscite/imx8mn_var_som/Kconfig"
 source "board/toradex/verdin-imx8mm/Kconfig"
 source "board/toradex/verdin-imx8mp/Kconfig"
+source "board/rbz/mod_imx8m_plus/Kconfig"
+source "board/rbz/mod_imx8m_nano/Kconfig"
+source "board/rbz/mod_imx8m_mini/Kconfig"
 
 endif

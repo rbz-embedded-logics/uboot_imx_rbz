@@ -1,0 +1,17 @@
+if TARGET_MOD_IMX8M_NANO
+
+config SYS_BOARD
+	default "mod_imx8m_nano"
+
+config SYS_VENDOR
+	default "rbz"
+
+config SYS_CONFIG_NAME
+	default "mod_imx8m_nano"
+
+config IMX_CONFIG
+	default "board/rbz/mod_imx8m_nano/imximage-8mn-lpddr4.cfg"
+
+source "board/rbz/common/Kconfig"
+
+endif
