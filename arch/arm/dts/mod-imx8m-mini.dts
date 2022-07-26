@@ -13,8 +13,8 @@
 	compatible = "rbz,mod-imx8m-mini", "fsl,imx8mm";
 
 	chosen {
-		bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200";
-		stdout-path = &uart1;
+		bootargs = "console=ttymxc2,115200 earlycon=ec_imx6q,0x30880000,115200";
+		stdout-path = &uart3;
         rbz,eeprom = &eeprom;
 	};
 
@@ -276,10 +276,9 @@
   status = "okay";
 };
 
-&uart1 {
+&uart3 {
   pinctrl-names = "default";
-  pinctrl-0 = <&pinctrl_uart1>;
-  fsl,dte-mode;
+  pinctrl-0 = <&pinctrl_uart3>;
   status = "okay";
 };
 
@@ -407,10 +406,10 @@
             MX8MM_IOMUXC_GPIO1_IO10_GPIO1_IO10     0x16
         >;
     };
-	pinctrl_uart1: uart1grp {
+	pinctrl_uart3: uart1grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_SAI2_RXC_UART1_DTE_TX	0x140
-			MX8MM_IOMUXC_SAI2_RXFS_UART1_DTE_RX	0x140
+			MX8MM_IOMUXC_UART3_TXD_UART3_DCE_TX	0x140
+			MX8MM_IOMUXC_UART3_RXD_UART3_DCE_RX	0x140
 		>;
 	};
 
