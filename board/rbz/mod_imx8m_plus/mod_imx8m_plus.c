@@ -65,7 +65,6 @@ int board_read_rom_ethaddr(void)
 {
   int ret = -EINVAL;
   unsigned char mac[6] = {};
-  char cmd[128] = {};
   struct udevice *dev;
   ofnode eeprom;
 

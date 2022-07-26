@@ -310,13 +310,10 @@ config TARGET_MOD_IMX8M_MINI
 
 config TARGET_MOD_IMX8M_PLUS
 	bool "RBZ MOD_IMX8M_PLUS Board"
+	select BINMAN
 	select IMX8MP
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
-	select FSL_CAAM
-	select FSL_BLOB
-	select MISC
-	select SPL_CRYPTO_SUPPORT if SPL
 endchoice
 
 source "board/advantech/imx8mp_rsb3720a1/Kconfig"
