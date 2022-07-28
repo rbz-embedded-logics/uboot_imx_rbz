@@ -67,21 +67,6 @@ void spl_dram_init(void)
 	ddr_init(&dram_timing);
 }
 
-#define I2C_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE | PAD_CTL_PE)
-#define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
-struct i2c_pads_info i2c_pad_info3 = {
-	.scl = {
-		.i2c_mode = IMX8MN_PAD_I2C3_SCL__I2C3_SCL | PC | ((iomux_v3_cfg_t)(IOMUX_CONFIG_SION) << MUX_MODE_SHIFT),
-		.gpio_mode = IMX8MN_PAD_I2C3_SCL__GPIO5_IO18 | PC,
-		.gp = IMX_GPIO_NR(5, 18),
-	},
-	.sda = {
-		.i2c_mode = IMX8MN_PAD_I2C3_SDA__I2C3_SDA | PC | ((iomux_v3_cfg_t)(IOMUX_CONFIG_SION) << MUX_MODE_SHIFT),
-		.gpio_mode = IMX8MN_PAD_I2C3_SDA__GPIO5_IO19 | PC,
-		.gp = IMX_GPIO_NR(5, 19),
-	},
-};
-
 #if CONFIG_IS_ENABLED(DM_PMIC_PCA9450)
 int power_init_board(void)
 {
@@ -99,22 +84,9 @@ int power_init_board(void)
 	/* BUCKxOUT_DVS0/1 control BUCK123 output */
 	pmic_reg_write(dev, PCA9450_BUCK123_DVS, 0x29);
 
-#ifdef CONFIG_IMX8MN_LOW_DRIVE_MODE
-	/* Set VDD_SOC/VDD_DRAM to 0.8v for low drive mode */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x10);
-#elif defined(CONFIG_TARGET_IMX8MN_DDR3_EVK)
-	/* Set VDD_SOC to 0.85v for DDR3L at 1600MTS */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x14);
-
-	/* Disable the BUCK2 */
-	pmic_reg_write(dev, PCA9450_BUCK2CTRL, 0x48);
-
-	/* Set NVCC_DRAM to 1.35v */
-	pmic_reg_write(dev, PCA9450_BUCK6OUT, 0x1E);
-#else
 	/* increase VDD_SOC/VDD_DRAM to typical value 0.95V before first DRAM access */
 	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x1C);
-#endif
+
 	/* Set DVS1 to 0.75v for low-v suspend */
 	/* Enable DVS control through PMIC_STBY_REQ and set B1_ENMODE=1 (ON by PMIC_ON_REQ=H) */
 	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS1, 0xC);
@@ -138,13 +110,12 @@ void spl_board_init(void)
 	struct udevice *dev;
     int ret; 
 
-	debug("Normal Boot\n");
-
-	ret = uclass_get_device_by_name(UCLASS_CLK,
-					"clock-controller@30380000",
-					&dev);
-	if (ret < 0)
-		puts("Failed to find clock node. Check device tree\n");
+	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
+		ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(caam_jr), &dev);
+		if (ret)
+			printf("Failed to initialize caam_jr: %d\n", ret);
+	}
+	puts("Normal Boot\n");
 }
 
 #ifdef CONFIG_SPL_LOAD_FIT
@@ -159,6 +130,7 @@ int board_fit_config_name_match(const char *name)
 
 void board_init_f(ulong dummy)
 {
+	struct udevice *dev;
 	int ret;
 
 	/* Clear the BSS. */
@@ -178,6 +150,14 @@ void board_init_f(ulong dummy)
 		hang();
 	}
 
+	ret = uclass_get_device_by_name(UCLASS_CLK,
+					"clock-controller@30380000",
+					&dev);
+	if (ret < 0) {
+		printf("Failed to find clock node. Check device tree\n");
+		hang();
+	}
+
 	enable_tzc380();
 
 	power_init_board();
@@ -188,8 +168,7 @@ void board_init_f(ulong dummy)
 	board_init_r(NULL, 0);
 }
 
-#ifdef CONFIG_SPL_MMC_SUPPORT
-
+#ifdef CONFIG_SPL_MMC
 #define UBOOT_RAW_SECTOR_OFFSET 0x40
 unsigned long spl_mmc_get_uboot_raw_sector(struct mmc *mmc)
 {
