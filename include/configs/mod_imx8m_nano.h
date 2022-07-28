@@ -19,24 +19,15 @@
 	(QSPI0_AMBA_BASE + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)
 
 #ifdef CONFIG_SPL_BUILD
-#define CONFIG_SPL_STACK		0x95dff0
-#define CONFIG_SPL_BSS_START_ADDR      0x95e000
+#define CONFIG_SPL_STACK		0x96fff0
+#define CONFIG_SPL_BSS_START_ADDR      0x954000
+#define CONFIG_MALLOC_F_ADDR 0x970000
 #define CONFIG_SPL_BSS_MAX_SIZE		SZ_8K	/* 8 KB */
 #define CONFIG_SYS_SPL_MALLOC_START	0x42200000
 #define CONFIG_SYS_SPL_MALLOC_SIZE	SZ_512K	/* 512 KB */
 
 /* For RAW image gives a error info not panic */
 #define CONFIG_SPL_ABORT_ON_RAW_IMAGE
-
-#if defined(CONFIG_NAND_BOOT)
-#define CONFIG_SPL_NAND_BASE
-#define CONFIG_SPL_NAND_IDENT
-#define CONFIG_SYS_NAND_U_BOOT_OFFS 	0x4000000 /* Put the FIT out of first 64MB boot area */
-
-/* Set a redundant offset in nand FIT mtdpart. The new uuu will burn full boot image (not only FIT part) to the mtdpart, so we check both two offsets */
-#define CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND \
-	(CONFIG_SYS_NAND_U_BOOT_OFFS + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512 - 0x8400)
-#endif
 
 #endif
 
@@ -179,15 +170,6 @@
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 
-#ifdef CONFIG_NAND_MXS
-#define CONFIG_CMD_NAND_TRIMFFS
-
-/* NAND stuff */
-#define CONFIG_SYS_MAX_NAND_DEVICE     1
-#define CONFIG_SYS_NAND_BASE           0x20000000
-#define CONFIG_SYS_NAND_USE_FLASH_BBT
-#endif /* CONFIG_NAND_MXS */
-
 /* USB configs */
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_USBD_HS
@@ -198,9 +180,5 @@
 
 #define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_USB_MAX_CONTROLLER_COUNT         2
-
-#ifdef CONFIG_ANDROID_SUPPORT
-#include "imx8mn_evk_android.h"
-#endif
 
 #endif
