@@ -189,6 +189,10 @@
 	assigned-clock-parents = <&clk IMX8MN_SYS_PLL1_400M>;
 };
 
+&tmu {
+  u-boot,dm-pre-reloc;
+};
+
 &i2c1 {
 	u-boot,dm-spl;
 };
