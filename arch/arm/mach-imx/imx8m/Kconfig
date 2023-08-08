@@ -450,21 +450,18 @@ config TARGET_LIBREM5
 
 config TARGET_MOD_IMX8M_NANO
 	bool "RBZ MOD_IMX8M_NANO Board"
-    select BINMAN
 	select IMX8MN
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
 
 config TARGET_MOD_IMX8M_MINI
 	bool "RBZ MOD_IMX8M_MINI Board"
-    select BINMAN
 	select IMX8MM
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
 
 config TARGET_MOD_IMX8M_PLUS
 	bool "RBZ MOD_IMX8M_PLUS Board"
-	select BINMAN
 	select IMX8MP
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
