@@ -107,13 +107,7 @@ int power_init_board(void)
 
 void spl_board_init(void)
 {
-	struct udevice *dev;
-	uclass_find_first_device(UCLASS_MISC, &dev);
-
-	for (; dev; uclass_find_next_device(&dev)) {
-		if (device_probe(dev))
-			continue;
-	}
+	arch_misc_init();
 
 	/* Set GIC clock to 500Mhz for OD VDD_SOC. Kernel driver does not allow to change it.
 	 * Should set the clock after PMIC setting done.
@@ -150,8 +144,6 @@ void board_init_f(ulong dummy)
 
 	timer_init();
 
-	preloader_console_init();
-
 	ret = spl_early_init();
 	if (ret) {
 		debug("spl_early_init() failed: %d\n", ret);
@@ -165,6 +157,8 @@ void board_init_f(ulong dummy)
 		printf("Failed to find clock node. Check device tree\n");
 		hang();
 	}
+
+	preloader_console_init();
 
 	enable_tzc380();
 
