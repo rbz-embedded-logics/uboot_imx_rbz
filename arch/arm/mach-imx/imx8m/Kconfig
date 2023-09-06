@@ -300,6 +300,9 @@ config TARGET_MOD_IMX8M_NANO
 	select IMX8MN
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
+	select FSL_CAAM
+	select FSL_BLOB
+	select SPL_CRYPTO if SPL
 
 config TARGET_MOD_IMX8M_MINI
 	bool "RBZ MOD_IMX8M_MINI Board"
