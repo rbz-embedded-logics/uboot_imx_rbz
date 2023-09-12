@@ -23,8 +23,30 @@
 #include <linux/arm-smccc.h>
 #include <micrel.h>
 #include <mmc.h>
+#include "../common/eeprom_hw.h"
 
 DECLARE_GLOBAL_DATA_PTR;
+
+int board_phys_sdram_size(phys_size_t *size)
+{
+  unsigned char config;
+  u32 ram;
+
+  if(board_read_rom_eeprom(&config)) {
+    debug("Cannot read eeprom config. Using default DDR configuration.\n");
+    config = 0;
+  }
+
+  if (config == 0xff)
+    config = 0;
+
+  config &= 0x0f;
+  ram = get_ramsize(config);
+
+  *size = ram;
+
+  return 0;
+}
 
 #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
 #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)

@@ -35,6 +35,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+extern struct dram_timing_info dram_timing_512M;
+extern struct dram_timing_info dram_timing_1G;
+
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 #ifdef CONFIG_SPL_BOOTROM_SUPPORT
@@ -64,7 +67,29 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 
 void spl_dram_init(void)
 {
-	ddr_init(&dram_timing);
+  unsigned char config;
+  u32 ram;
+
+  if(board_read_rom_eeprom(&config)) {
+    debug("Cannot read eeprom config. Using default DDR configuration.\n");
+    config = 0;
+  }
+
+  if (config == 0xff)
+    config = 0;
+
+  config &= 0x0f;
+  ram = get_ramsize(config);
+
+  switch (ram) {
+    case SZ_512M:
+    default:
+      ddr_init(&dram_timing_512M);
+      break;
+    case SZ_1G:
+      ddr_init(&dram_timing_1G);
+      break;
+  }
 }
 
 #if CONFIG_IS_ENABLED(DM_PMIC_PCA9450)
