@@ -3,4 +3,5 @@
 # (C) Copyright 2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 
-obj-y				+= mmc.o
+obj-y		+= mmc.o
+obj-y		+= eeprom_hw.o
