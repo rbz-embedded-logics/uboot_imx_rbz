@@ -12,6 +12,4 @@ config SYS_CONFIG_NAME
 config IMX_CONFIG
 	default "board/rbz/mod_imx8m_mini/imximage-8mm.cfg"
 
-source "board/rbz/common/Kconfig"
-
 endif
