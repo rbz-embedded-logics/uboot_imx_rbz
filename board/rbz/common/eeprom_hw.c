@@ -66,7 +66,7 @@ __weak int board_read_rom_eeprom(unsigned char *config)
   return 0;
 }
 
-u32 get_ramsize(unsigned char config)
+long get_ramsize(unsigned char config)
 {
   return ram_sizes_mb[config] * SZ_1M;
 }
