@@ -33,8 +33,14 @@
 #include <fsl_esdhc_imx.h>
 #include <mmc.h>
 #include <asm/arch/ddr.h>
+#include "../common/eeprom_hw.h"
 
 DECLARE_GLOBAL_DATA_PTR;
+
+extern struct dram_timing_info dram_timing_512M;
+extern struct dram_timing_info dram_timing_1G;
+extern struct dram_timing_info dram_timing_2G;
+extern struct dram_timing_info dram_timing_4G;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
@@ -64,7 +70,35 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 
 void spl_dram_init(void)
 {
-	ddr_init(&dram_timing);
+  unsigned char config;
+  phys_size_t ram;
+
+  if(board_read_rom_eeprom(&config)) {
+    debug("Cannot read eeprom config. Using default DDR configuration.\n");
+    config = 1;
+  }
+
+  if (config == 0xff)
+    config = 1;
+
+  config &= 0x0f;
+  ram = get_ramsize(config);
+
+  switch (ram) {
+    case SZ_512M:
+      ddr_init(&dram_timing_512M);
+      break;
+    case SZ_1G:
+    default:
+      ddr_init(&dram_timing_1G);
+      break;
+    case SZ_2G:
+      ddr_init(&dram_timing_2G);
+      break;
+    case SZ_4G:
+      ddr_init(&dram_timing_4G);
+      break;
+  }
 }
 
 #if CONFIG_IS_ENABLED(DM_PMIC_PCA9450)

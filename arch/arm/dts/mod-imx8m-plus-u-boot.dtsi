@@ -225,6 +225,10 @@
 	u-boot,dm-spl;
 };
 
+&{/soc@0/bus@30800000/i2c@30a50000/eeprom_config@50} {
+	u-boot,dm-spl;
+};
+
 &{/soc@0/bus@30800000/i2c@30a50000/pca9450@25} {
 	u-boot,dm-spl;
 };

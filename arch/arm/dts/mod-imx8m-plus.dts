@@ -16,6 +16,7 @@
 		bootargs = "console=ttymxc2,115200";
 		stdout-path = &uart3;
         rbz,eeprom = &eeprom;
+        rbz,eeprom_config = &eeprom_config;
 	};
 
     aliases {
@@ -229,7 +230,12 @@
 			};
 		};
 	};
-
+  
+    eeprom_config: eeprom_config@50 {
+        compatible = "atmel,24c02";
+        reg = <0x50>;
+    };
+    
     eeprom: eeprom@58 {
         compatible = "atmel,24mac402";
         reg = <0x58>;
