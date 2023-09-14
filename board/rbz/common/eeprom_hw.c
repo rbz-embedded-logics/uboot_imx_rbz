@@ -66,7 +66,7 @@ __weak int board_read_rom_eeprom(unsigned char *config)
   return 0;
 }
 
-long get_ramsize(unsigned char config)
+phys_size_t get_ramsize(unsigned char config)
 {
-  return ram_sizes_mb[config] * SZ_1M;
+  return (u64)ram_sizes_mb[config] << 20ULL;
 }
