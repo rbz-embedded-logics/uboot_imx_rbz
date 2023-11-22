@@ -79,7 +79,7 @@ void spl_dram_init(void)
   }
 
   if (config == 0xff)
-    config = 1;
+    config = 4;
 
   config &= 0x0f;
   ram = get_ramsize(config);

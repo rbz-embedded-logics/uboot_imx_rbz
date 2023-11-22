@@ -44,7 +44,7 @@ int board_phys_sdram_size(phys_size_t *size)
   }
 
   if (config == 0xff)
-    config = 1;
+    config = 4;
 
   config &= 0x0f;
   ram = get_ramsize(config);
