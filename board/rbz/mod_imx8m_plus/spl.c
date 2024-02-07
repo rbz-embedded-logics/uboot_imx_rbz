@@ -34,6 +34,7 @@
 #include <mmc.h>
 #include <asm/arch/ddr.h>
 #include "../common/eeprom_hw.h"
+#include "lpddr4_timing.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -68,36 +69,92 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 #endif
 }
 
-void spl_dram_init(void)
+/* Function used to identify the DDR.
+ * Function returns the timing parameters to use for DDR training, or NULL if failed
+ * to identify the DDR.
+ *
+ * In order to read the DDR values, the function will train the DDR with
+ * default parameters.
+ * Those parameters may be the same parameters needed to train the DDR.
+ * In this case, this function will set @needs_training to false, indicating that
+ * there is no need to train the DDR again.
+ * Caller can ignore this argument without harm (argument can be NULL).
+ */
+static struct dram_timing_info *spl_identify_ddr(bool *needs_training)
 {
-  unsigned char config;
-  phys_size_t ram;
+  int ret;
+  unsigned int mr5, mr6, mr7, mr8;
+  bool tmp;
 
-  if(board_read_rom_eeprom(&config)) {
-    debug("Cannot read eeprom config. Using default DDR configuration.\n");
-    config = 1;
+  /* Init the @needs_training argument */
+  if (!needs_training)
+    needs_training = &tmp;
+  *needs_training = true;
+
+  /* Training with 4G Micron */
+  if (!ddr_init(&dram_timing_4gb_micron)) {
+    mr5 = lpddr4_mr_read(0xF, 0x5);
+    mr6 = lpddr4_mr_read(0xF, 0x6);
+    mr7 = lpddr4_mr_read(0xF, 0x7);
+    mr8 = lpddr4_mr_read(0xF, 0x8);
+
+    printf("MR5=0x%x, MR6=0x%x, MR7=0x%x, MR8=0x%x\n", mr5, mr6, mr7, mr8);
+
+    printf("DDR 4G Micron idenfified!\n");
+    *needs_training = false;
+    return &dram_timing_4gb_micron;
+  } else {
+    /* Trainig with 1G Micron */
+    ret = ddr_init(&dram_timing_1gb_micron);
+    if (ret)
+      goto err;
+
+    mr5 = lpddr4_mr_read(0xF, 0x5);
+    mr6 = lpddr4_mr_read(0xF, 0x6);
+    mr7 = lpddr4_mr_read(0xF, 0x7);
+    mr8 = lpddr4_mr_read(0xF, 0x8);
+
+    printf("MR5=0x%x, MR6=0x%x, MR7=0x%x, MR8=0x%x\n", mr5, mr6, mr7, mr8);
+
+    if (mr5 == 0xff && mr6 == 0x54 && mr7 == 0x1 && mr8 == 0x10) {
+      printf("DDR 1G Micron identified!\n");
+      *needs_training = false;
+      return &dram_timing_1gb_micron;
+    } else if (mr5 == 0xff && mr6 == 0x7 && mr7 == 0xb8 && mr8 == 0x10) {
+      printf("DDR 2G Micron identified!\n");
+      return &dram_timing_1gb_micron;   // CAMBIAR A 2GB
+    } else {
+      printf("DDR 2G Micron identified!\n");
+      return &dram_timing_1gb_micron;   // CAMBIAR A 2GB
+    }
   }
 
-  if (config == 0xff)
-    config = 4;
+err:
+  printf("Could not identify DDR!\n");
+  return NULL;
+}
 
-  config &= 0x0f;
-  ram = get_ramsize(config);
+void spl_dram_init(void)
+{
+  struct dram_timing_info *dram_info;
+  int ret = -1;
+  bool need_training;
 
-  switch (ram) {
-    case SZ_512M:
-      ddr_init(&dram_timing_512M);
-      break;
-    case SZ_1G:
-    default:
-      ddr_init(&dram_timing_1G);
-      break;
-    case SZ_2G:
-      ddr_init(&dram_timing_2G);
-      break;
-    case SZ_4G:
-      ddr_init(&dram_timing_4G);
-      break;
+  dram_info = spl_identify_ddr(&need_training);
+  if (dram_info) {
+    /* DDR was identified, do we need to train the DDR? */
+    if (need_training)
+      ret = ddr_init(dram_info);
+    else
+      ret = 0;
+  }
+
+  /* If we failed to identify the DDR, or the parameters returned from
+   * spl_identify_ddr caused in DDR training failure - fall back to a
+   * generic way to train the DDR.
+   */
+  if (ret == -1) {
+      hang(); //Could not init the DDR - nothing we can do..
   }
 }
 

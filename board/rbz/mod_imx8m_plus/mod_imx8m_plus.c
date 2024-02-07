@@ -17,6 +17,7 @@
 #include <asm-generic/gpio.h>
 #include <asm/arch/imx8mp_pins.h>
 #include <asm/arch/clock.h>
+#include <asm/arch/ddr.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
@@ -33,23 +34,54 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int board_phys_sdram_size(phys_size_t *size)
+__weak unsigned int lpddr4_mr_read(unsigned int mr_rank, unsigned int mr_addr)
 {
-  unsigned char config;
-  phys_size_t ram;
+  unsigned int tmp;
 
-  if(board_read_rom_eeprom(&config)) {
-    debug("Cannot read eeprom config: Using default DDR configuration.\n");
-    config = 1;
+  reg32_write(DRC_PERF_MON_MRR0_DAT(0), 0x1);
+
+  do {
+    tmp = reg32_read(DDRC_MRSTAT(0));
+  } while (tmp & 0x1);
+
+  reg32_write(DDRC_MRCTRL0(0), (mr_rank << 4) | 0x1);
+  reg32_write(DDRC_MRCTRL1(0), (mr_addr << 8));
+  reg32setbit(DDRC_MRCTRL0(0), 31);
+  do {
+    tmp = reg32_read(DRC_PERF_MON_MRR0_DAT(0));
+  } while ((tmp & 0x8) == 0);
+  tmp = reg32_read(DRC_PERF_MON_MRR1_DAT(0));
+  reg32_write(DRC_PERF_MON_MRR0_DAT(0), 0x4);
+
+  while (tmp) { //try to find a significant byte in the word
+    if (tmp & 0xff) {
+      tmp &= 0xff;
+      break;
+    }
+    tmp >>= 8;
   }
 
-  if (config == 0xff)
-    config = 4;
+  return tmp;
+}
 
-  config &= 0x0f;
-  ram = get_ramsize(config);
+int board_phys_sdram_size(phys_size_t *size)
+{
+  unsigned int mr5, mr6, mr7, mr8;
 
-  *size = ram;
+  mr5 = lpddr4_mr_read(0xF, 0x5);
+  mr6 = lpddr4_mr_read(0xF, 0x6);
+  mr7 = lpddr4_mr_read(0xF, 0x7);
+  mr8 = lpddr4_mr_read(0xF, 0x8);
+
+  if (mr5 == 0xff && mr6 == 0x7 && mr7 == 0x0 && mr8 == 0x10) {
+    *size = (u64)4096 << 20ULL;
+  } else if (mr5 == 0xff && mr6 == 0x7 && mr7 == 0xb8 && mr8 == 0x10) {
+    *size = (u64)1024 << 20ULL;  // CAMBIAR A 2GB
+  } else if (mr5 == 0xff && mr6 == 0x54 && mr7 == 0x1 && mr8 == 0x10) {
+    *size = (u64)1024 << 20ULL;
+  } else {
+    *size = (u64)1024 << 20ULL;
+  }
 
   return 0;
 }
