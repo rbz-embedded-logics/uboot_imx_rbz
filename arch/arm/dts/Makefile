@@ -1082,16 +1082,19 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mp-verdin-wifi-dev.dtb \
 	imx8mq-pico-pi.dtb \
 	imx8mq-kontron-pitx-imx8m.dtb \
-	imx8mq-librem5-r4.dtb \
-	mod-imx8m-plus.dtb \
-	mod-imx8m-nano.dtb \
-	mod-imx8m-mini.dtb
+	imx8mq-librem5-r4.dtb
 
 dtb-$(CONFIG_ARCH_IMX9) += \
+	imx95-19x19-evk.dtb \
+	imx95-19x19-titan.dtb \
 	imx93-11x11-evk.dtb \
+	imx93-11x11-evk-pmic-pf0900.dtb \
 	imx93-14x14-evk.dtb \
 	imx93-9x9-qsb.dtb \
-	imx93-9x9-qsb-ontat-wvga-panel.dts
+	imx93-9x9-qsb-ontat-wvga-panel.dtb \
+	imx91p-11x11-evk.dtb \
+	imx91p-9x9-qsb-ontat-wvga-panel.dtb \
+	imx91p-9x9-qsb-spinand.dtb
 
 dtb-$(CONFIG_ARCH_IMXRT) += imxrt1050-evk.dtb \
 	imxrt1020-evk.dtb \
